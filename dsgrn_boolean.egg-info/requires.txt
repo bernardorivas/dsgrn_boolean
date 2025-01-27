@@ -1,0 +1,6 @@
+dsgrn
+pychomp2
+numpy
+jax
+jaxlib
+jupyter
