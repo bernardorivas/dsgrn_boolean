@@ -2,7 +2,7 @@ from ipywidgets import interact, FloatSlider
 import ipywidgets as widgets
 from .nullclines import plot_nullclines
 
-def plot_nullclines_interactive(L, U, T):
+def plot_nullclines_interactive(L, U, T, d_max):
     """
     Create an interactive plot of nullclines with a slider to control the Hill function steepness.
     
@@ -10,7 +10,7 @@ def plot_nullclines_interactive(L, U, T):
         L: Lower bounds matrix
         U: Upper bounds matrix
         T: Threshold matrix
-    
+        d_max: Maximum value for the Hill function exponent
     Returns:
         Interactive widget with slider controlling parameter d and displaying nullclines plot
     """
@@ -18,11 +18,11 @@ def plot_nullclines_interactive(L, U, T):
     @interact(d=FloatSlider(
         value=5.0,
         min=1.0,
-        max=30.0,
-        step=0.5,
+        max=d_max,
+        step=1,
         description='d:',
         continuous_update=False  # Only update when slider is released
     ))
     def update(d):
-        zeros = plot_nullclines(L, U, T, d)
+        zeros = plot_nullclines(L, U, T, d)  # Uses the same plot_nullclines function
         return zeros
