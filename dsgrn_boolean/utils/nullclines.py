@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .newton import newton_method
 from dsgrn_boolean.models.hill import HillFunction
-from dsgrn_boolean.models.hill_model import hill  # Updated import
+from dsgrn_boolean.models.hill import hill
 
 def plot_nullclines(L, U, T, d, n_points=1000):
     """
