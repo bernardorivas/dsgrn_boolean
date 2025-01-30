@@ -114,7 +114,8 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
         "best_match": max(results),
         "best_match_d": optimal_d,
         "worst_match": min(results),
-        "worst_match_d": d_range[np.argmin(results)]
+        "worst_match_d": d_range[np.argmin(results)],
+        "expected_eq": expected_eq
     }
     
     # Only create and save visualization if show_plot is True

@@ -12,7 +12,7 @@ import json
 
 def main():
     parser = argparse.ArgumentParser(description='Compare Hill coefficient analyses')
-    parser.add_argument('--samples', type=int, default=30)
+    parser.add_argument('--samples', type=int, default=20)
     args = parser.parse_args()
     
     # Setup network and parameter
@@ -29,8 +29,9 @@ def main():
     samples_f01 = load_samples(par_index, filtered=True, filter_tol=0.1)[:args.samples]
     samples_f10 = load_samples(par_index, filtered=True, filter_tol=1.0)[:args.samples]
     
-    # Run analyses without individual plots
-    d_range = range(100, 101)
+    # Run analyses without individual plot
+    # d_range = range(1, 101)
+    d_range = range(5, 101, 5)
     print("\nAnalyzing samples...")
     results_unf, summary_unf, _, _ = analyze_hill_coefficients(network, parameter, samples_unf, d_range, show_plot=False)
     results_f01, summary_01, _, _ = analyze_hill_coefficients(network, parameter, samples_f01, d_range, show_plot=False)
