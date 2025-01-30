@@ -9,6 +9,24 @@ import argparse
 from dsgrn_boolean.utils.hill_analysis import analyze_hill_coefficients
 from dsgrn_boolean.utils.sample_management import load_samples
 
+def analyze_without_plotting(network, parameter, samples, d_range):
+    """Wrapper for analyze_hill_coefficients that suppresses plotting"""
+    # Temporarily redirect stdout to suppress print statements
+    import sys
+    from io import StringIO
+    temp_stdout = StringIO()
+    sys.stdout = temp_stdout
+    
+    # Run analysis
+    results, summary, optimal_d, sample_results = analyze_hill_coefficients(
+        network, parameter, samples, d_range
+    )
+    
+    # Restore stdout
+    sys.stdout = sys.__stdout__
+    
+    return results, summary, optimal_d, sample_results
+
 def main():
     # Define the network specification
     net_spec = """x : x + y : E
@@ -38,11 +56,11 @@ def main():
     
     # Run analysis for each set
     print("\nAnalyzing unfiltered samples...")
-    results_unfiltered, _, _, _ = analyze_hill_coefficients(network, parameter, samples_unfiltered, d_range)
+    results_unfiltered, _, _, _ = analyze_without_plotting(network, parameter, samples_unfiltered, d_range)
     print("\nAnalyzing filtered samples (tol=0.1)...")
-    results_filtered_01, _, _, _ = analyze_hill_coefficients(network, parameter, samples_filtered_01, d_range)
+    results_filtered_01, _, _, _ = analyze_without_plotting(network, parameter, samples_filtered_01, d_range)
     print("\nAnalyzing filtered samples (tol=1.0)...")
-    results_filtered_10, summary, optimal_d, sample_results = analyze_hill_coefficients(network, parameter, samples_filtered_10, d_range)
+    results_filtered_10, summary, optimal_d, sample_results = analyze_without_plotting(network, parameter, samples_filtered_10, d_range)
     
     # Plot results as grouped bar graph
     plt.figure(figsize=(15, 8))
