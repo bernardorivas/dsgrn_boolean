@@ -1,4 +1,9 @@
 import numpy as np
+import warnings
+
+# Suppress overflow warnings globally for this module
+warnings.filterwarnings('ignore', category=RuntimeWarning, message='overflow encountered')
+warnings.filterwarnings('ignore', category=RuntimeWarning, message='invalid value encountered')
 
 class HillFunction:
     def __init__(self, L, U, theta, d):
@@ -16,43 +21,39 @@ class HillFunction:
         self.theta = theta
         self.d = d
 
+    def _compute_ratio(self, x):
+        """Safely compute (x/theta)^d using vectorized operations."""
+        ratio = np.zeros_like(x, dtype=float)
+        positive = x > 0
+        
+        if np.any(positive):
+            # Vectorized computation
+            log_ratio = self.d * np.log(np.where(positive, x/self.theta, 1.0))
+            ratio[positive] = np.exp(np.clip(log_ratio[positive], -700, 700))
+        
+        return ratio
+
     def __call__(self, x):
-        """
-        Evaluates the Hill function.
-
-        Args:
-            x (float or numpy array): Input value(s).
-
-        Returns:
-            float or numpy array: The Hill function value(s) at x.
-        """
-        if isinstance(x, (float, int)):
-            if x < 0:
-                return self.L
-            else:
-                return self.L + (self.U - self.L) * (x**self.d) / (self.theta**self.d + x**self.d)
-        else:
-            result = np.where(x < 0, self.L, self.L + (self.U - self.L) * (x**self.d) / (self.theta**self.d + x**self.d))
-            return result
+        """Evaluates the Hill function using vectorized operations."""
+        x = np.asarray(x)
+        ratio = self._compute_ratio(x)
+        
+        # Vectorized computation
+        result = np.full_like(x, self.L)
+        result += np.where(np.isinf(ratio), 
+                          self.U - self.L,  # where infinite
+                          (self.U - self.L) * ratio / (1 + ratio))  # elsewhere
+        return result
 
     def derivative(self, x):
-        """
-        Evaluates the derivative of the Hill function.
-
-        Args:
-            x (float or numpy array): Input value(s).
-
-        Returns:
-            float or numpy array: The derivative of the Hill function at x.
-        """
-        if isinstance(x, (float, int)):
-            if x < 0:
-                return 0.0
-            else:
-                return (self.U - self.L) * self.d * self.theta**self.d * x**(self.d - 1) / (self.theta**self.d + x**self.d)**2
-        else:
-            result = np.where(x < 0, 0.0, (self.U - self.L) * self.d * self.theta**self.d * x**(self.d - 1) / (self.theta**self.d + x**self.d)**2)
-            return result
+        """Evaluates the derivative using vectorized operations."""
+        x = np.asarray(x)
+        ratio = self._compute_ratio(x)
+        
+        result = np.zeros_like(x)
+        valid = (x > 0) & ~np.isinf(ratio) & (ratio != 0)
+        result[valid] = (self.U - self.L) * self.d * ratio[valid] / (x[valid] * (1 + ratio[valid])**2)
+        return result
 
 def hill(L, U, T, d):
     """

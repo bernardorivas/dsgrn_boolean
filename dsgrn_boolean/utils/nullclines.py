@@ -79,7 +79,7 @@ def plot_nullclines(L, U, T, d, n_points=1000):
     system, jacobian = hill(L, U, T, d)
     
     # Find zeros using newton method with more initial conditions
-    n_grid = 40  # increased from 20 to catch more equilibria
+    n_grid = 10 
     x_grid = np.linspace(0, x_max, n_grid)
     y_grid = np.linspace(0, y_max, n_grid)
     initial_conditions = [np.array([x, y]) for x in x_grid for y in y_grid]

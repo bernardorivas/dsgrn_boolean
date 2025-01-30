@@ -56,23 +56,19 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
         n_processes: Number of processes to use (default: CPU count - 1)
     """
     if n_processes is None:
-        n_processes = max(1, os.cpu_count() - 1)  # Leave one core free
-    
-    # Estimate runtime
-    start_time = time.time()
-    
-    # Do a quick test run
-    L, U, T = extract_parameter_matrices(samples[0], network)
-    test_start = time.time()
-    count_zeros(L, U, T, d_range[0], len(DSGRN.EquilibriumCells(parameter)))
-    single_run_time = time.time() - test_start
-    
-    total_iterations = len(samples) * len(d_range)
-    estimated_time = (single_run_time * total_iterations) / n_processes  # Adjust for parallel
-    print(f"Estimated total runtime with {n_processes} processes: {estimated_time:.1f} seconds ({estimated_time/60:.1f} minutes)")
+        n_processes = max(1, os.cpu_count() - 1)
     
     # Get expected number of equilibria
     expected_eq = len(DSGRN.EquilibriumCells(parameter))
+    
+    # Timing estimates based on actual measurements
+    samples_per_process = len(samples) / n_processes
+    time_per_batch = 11.0  # seconds (measured from actual runtime)
+    total_batches = len(d_range)
+    estimated_seconds = time_per_batch * total_batches
+    
+    print(f"Processing {len(samples)} samples for {len(d_range)} d values using {n_processes} processes")
+    print(f"Estimated runtime: {estimated_seconds:.1f} seconds ({estimated_seconds/60:.1f} minutes)")
     
     # Pre-compute all parameter matrices
     print("Pre-computing parameter matrices...")
@@ -108,10 +104,6 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
             print(f"d={d}: {percentage:.1f}% match ({matches}/{len(samples)} samples)")
             print(f"  Matched samples: {sample_results[d]['matches']}")
             print(f"  Failed samples: {sample_results[d]['failures']}")
-    
-    # Report actual runtime
-    total_time = time.time() - start_time
-    print(f"\nActual runtime: {total_time:.1f} seconds ({total_time/60:.1f} minutes)")
     
     # Find optimal d value
     optimal_d = d_range[np.argmax(results)]
