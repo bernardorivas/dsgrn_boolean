@@ -8,24 +8,7 @@ import argparse
 
 from dsgrn_boolean.utils.hill_analysis import analyze_hill_coefficients
 from dsgrn_boolean.utils.sample_management import load_samples
-
-def analyze_without_plotting(network, parameter, samples, d_range):
-    """Wrapper for analyze_hill_coefficients that suppresses plotting"""
-    # Temporarily redirect stdout to suppress print statements
-    import sys
-    from io import StringIO
-    temp_stdout = StringIO()
-    sys.stdout = temp_stdout
-    
-    # Run analysis
-    results, summary, optimal_d, sample_results = analyze_hill_coefficients(
-        network, parameter, samples, d_range
-    )
-    
-    # Restore stdout
-    sys.stdout = sys.__stdout__
-    
-    return results, summary, optimal_d, sample_results
+from dsgrn_boolean.scripts.run_hill_analysis import analyze_and_plot
 
 def main():
     # Define the network specification
@@ -56,11 +39,22 @@ def main():
     
     # Run analysis for each set
     print("\nAnalyzing unfiltered samples...")
-    results_unfiltered, _, _, _ = analyze_without_plotting(network, parameter, samples_unfiltered, d_range)
+    results_unfiltered, summary_unf, _, _ = analyze_and_plot(
+        network, parameter, samples_unfiltered, d_range, par_index, 
+        filtered=False, plot=False
+    )
+    
     print("\nAnalyzing filtered samples (tol=0.1)...")
-    results_filtered_01, _, _, _ = analyze_without_plotting(network, parameter, samples_filtered_01, d_range)
+    results_filtered_01, summary_01, _, _ = analyze_and_plot(
+        network, parameter, samples_filtered_01, d_range, par_index, 
+        filtered=True, filter_tol=0.1, plot=False
+    )
+    
     print("\nAnalyzing filtered samples (tol=1.0)...")
-    results_filtered_10, summary, optimal_d, sample_results = analyze_without_plotting(network, parameter, samples_filtered_10, d_range)
+    results_filtered_10, summary_10, _, _ = analyze_and_plot(
+        network, parameter, samples_filtered_10, d_range, par_index, 
+        filtered=True, filter_tol=1.0, plot=False
+    )
     
     # Plot results as grouped bar graph
     plt.figure(figsize=(15, 8))
@@ -102,15 +96,17 @@ def main():
     print("\nUnfiltered:")
     print(f"Best match: {max(results_unfiltered):.1f}% at d = {d_range[np.argmax(results_unfiltered)]}")
     print(f"Worst match: {min(results_unfiltered):.1f}% at d = {d_range[np.argmin(results_unfiltered)]}")
+    print(f"Expected equilibria: {summary_unf['expected_eq']}")
     
     print("\nFiltered (tol=0.1):")
     print(f"Best match: {max(results_filtered_01):.1f}% at d = {d_range[np.argmax(results_filtered_01)]}")
     print(f"Worst match: {min(results_filtered_01):.1f}% at d = {d_range[np.argmin(results_filtered_01)]}")
+    print(f"Expected equilibria: {summary_01['expected_eq']}")
     
     print("\nFiltered (tol=1.0):")
     print(f"Best match: {max(results_filtered_10):.1f}% at d = {d_range[np.argmax(results_filtered_10)]}")
     print(f"Worst match: {min(results_filtered_10):.1f}% at d = {d_range[np.argmin(results_filtered_10)]}")
-    print(f"Expected equilibria: {summary['expected_eq']}")
+    print(f"Expected equilibria: {summary_10['expected_eq']}")
 
 if __name__ == "__main__":
     main() 
