@@ -44,9 +44,17 @@ def process_parameter_set(args):
     n_zeros = count_zeros(L, U, T, d, expected_eq, specific_points=specific_points)
     return sample_index, (n_zeros == expected_eq)
 
-def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51), n_processes=None):
+def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51), n_processes=None, show_plot=True):
     """
     Analyze how different Hill coefficients match DSGRN equilibria predictions.
+    
+    Args:
+        network: DSGRN network
+        parameter: DSGRN parameter
+        samples: List of samples to analyze
+        d_range: Range of Hill coefficients to test
+        n_processes: Number of processes for parallel computation
+        show_plot: Whether to display and save the plot (default: True)
     """
     if n_processes is None:
         n_processes = max(1, os.cpu_count() - 1)
@@ -109,38 +117,39 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
         "worst_match_d": d_range[np.argmin(results)]
     }
     
-    # Create and save visualization
-    plt.figure(figsize=(10, 6))
-    plt.bar(d_range, results,
-            width=0.8,
-            alpha=0.8,
-            color='steelblue',
-            edgecolor='black',
-            linewidth=0.5)
+    # Only create and save visualization if show_plot is True
+    if show_plot:
+        plt.figure(figsize=(10, 6))
+        plt.bar(d_range, results,
+                width=0.8,
+                alpha=0.8,
+                color='steelblue',
+                edgecolor='black',
+                linewidth=0.5)
 
-    plt.xlabel('Hill coefficient (d)', fontsize=12)
-    plt.ylabel('Percentage (%)', fontsize=12)
-    plt.title('Percentage of samples whose number of equilibria matches DSGRN equilibria count', fontsize=14)
-    plt.ylim(0, 100)
-    plt.xlim(0, max(d_range))
+        plt.xlabel('Hill coefficient (d)', fontsize=12)
+        plt.ylabel('Percentage (%)', fontsize=12)
+        plt.title('Percentage of samples whose number of equilibria matches DSGRN equilibria count', fontsize=14)
+        plt.ylim(0, 100)
+        plt.xlim(0, max(d_range))
 
-    plt.yticks(range(0, 101, 10))
-    plt.grid(True, axis='y', linestyle='--', alpha=0.7)
-    plt.tick_params(axis='both', which='major', labelsize=10)
-    
-    # Create figures directory if it doesn't exist
-    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    figures_dir = os.path.join(root_dir, 'figures')
-    os.makedirs(figures_dir, exist_ok=True)
-    
-    # Save figure with timestamp
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    filename = f"hill_analysis_d{min(d_range)}-{max(d_range)}_{timestamp}.svg"
-    filepath = os.path.join(figures_dir, filename)
-    plt.savefig(filepath, format='svg', bbox_inches='tight')
-    print(f"\nFigure saved as: {filename}")
-    
-    plt.show()
+        plt.yticks(range(0, 101, 10))
+        plt.grid(True, axis='y', linestyle='--', alpha=0.7)
+        plt.tick_params(axis='both', which='major', labelsize=10)
+        
+        # Create figures directory if it doesn't exist
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        figures_dir = os.path.join(root_dir, 'figures')
+        os.makedirs(figures_dir, exist_ok=True)
+        
+        # Save figure with timestamp
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        filename = f"hill_analysis_d{min(d_range)}-{max(d_range)}_{timestamp}.svg"
+        filepath = os.path.join(figures_dir, filename)
+        plt.savefig(filepath, format='svg', bbox_inches='tight')
+        print(f"\nFigure saved as: {filename}")
+        
+        plt.show()
     
     # Print summary
     print(f"\nSummary:")
@@ -210,3 +219,52 @@ def count_zeros(L, U, T, d, expected_eq, n_grid=20, specific_points=None):
                     return len(zeros)
     
     return len(zeros)
+
+def create_single_plot(d_range, results, title, show=True):
+    """Create a single analysis plot"""
+    plt.figure(figsize=(10, 6))
+    plt.bar(d_range, results, 
+            width=0.8,            
+            alpha=0.8,            
+            color='steelblue',    
+            edgecolor='black',    
+            linewidth=0.5)        
+
+    plt.xlabel('Hill coefficient (d)', fontsize=12)
+    plt.ylabel('Percentage of matches (%)', fontsize=12)
+    plt.title(f'Percentage of Samples Matching DSGRN Equilibria Count\n{title}', fontsize=14)
+    plt.ylim(0, 100)
+    plt.xlim(0, max(d_range))
+    plt.yticks(range(0, 101, 10))
+    plt.grid(True, axis='y', linestyle='--', alpha=0.7)
+    plt.tick_params(axis='both', which='major', labelsize=10)
+    
+    if show:
+        plt.show()
+    return plt.gcf()
+
+def create_comparison_plot(d_range, results_unf, results_f01, results_f10, par_index):
+    """Create a comparison plot of three analyses"""
+    plt.figure(figsize=(15, 8))
+    bar_width = 0.25
+    
+    r1 = np.arange(len(d_range))
+    r2 = [x + bar_width for x in r1]
+    r3 = [x + bar_width for x in r2]
+    
+    plt.bar(r1, results_unf, bar_width, label='Unfiltered', color='steelblue', alpha=0.8)
+    plt.bar(r2, results_f01, bar_width, label='Filtered (tol=0.1)', color='forestgreen', alpha=0.8)
+    plt.bar(r3, results_f10, bar_width, label='Filtered (tol=1.0)', color='indianred', alpha=0.8)
+    
+    plt.xlabel('Hill coefficient (d)', fontsize=12)
+    plt.ylabel('Percentage of matches (%)', fontsize=12)
+    plt.title(f'Comparison of Sample Analyses for Parameter Node {par_index}', fontsize=14)
+    
+    plt.ylim(0, 100)
+    plt.yticks(range(0, 101, 10))
+    plt.grid(True, axis='y', linestyle='--', alpha=0.7)
+    plt.xticks([r + bar_width for r in range(len(d_range))], d_range)
+    plt.legend()
+    plt.tight_layout()
+    
+    return plt.gcf()
