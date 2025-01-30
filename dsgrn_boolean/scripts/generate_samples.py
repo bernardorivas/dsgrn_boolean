@@ -25,7 +25,7 @@ def generate_samples_file(net_spec, par_index, n_samples=10000):
     data_dir = os.path.join(root_dir, 'data')
     os.makedirs(data_dir, exist_ok=True)
     
-    # Generate samples
+    # Generate samples s
     filename = os.path.join(data_dir, f"parameter_samples_node_{par_index}.txt")
     print(f"\nGenerating {n_samples} samples for parameter node {par_index}...")
     
