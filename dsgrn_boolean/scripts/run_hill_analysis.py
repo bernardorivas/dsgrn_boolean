@@ -47,7 +47,7 @@ def main():
     
     # Run analysis
     # d_range = range(1, 101)
-    d_range = range(5, 101, 5)
+    d_range = range(5, 101, 52)
     results, summary, optimal_d, sample_results = analyze_and_plot(
         network, parameter, samples, d_range, par_index,
         filtered=args.filtered, filter_tol=args.filter_tol,
