@@ -47,13 +47,6 @@ def process_parameter_set(args):
 def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51), n_processes=None):
     """
     Analyze how different Hill coefficients match DSGRN equilibria predictions.
-    
-    Args:
-        network: DSGRN network object
-        parameter: DSGRN parameter node
-        samples: List of pre-generated parameter samples
-        d_range: Range of Hill coefficients to test (default: 1-50)
-        n_processes: Number of processes to use (default: CPU count - 1)
     """
     if n_processes is None:
         n_processes = max(1, os.cpu_count() - 1)
@@ -61,11 +54,14 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
     # Get expected number of equilibria
     expected_eq = len(DSGRN.EquilibriumCells(parameter))
     
-    # Timing estimates based on actual measurements
+    # Timing estimates
     samples_per_process = len(samples) / n_processes
     time_per_batch = 11.0  # seconds (measured from actual runtime)
     total_batches = len(d_range)
     estimated_seconds = time_per_batch * total_batches
+    
+    # Determine if we should show detailed output
+    show_detailed = len(d_range) <= 10
     
     print(f"Processing {len(samples)} samples for {len(d_range)} d values using {n_processes} processes")
     print(f"Estimated runtime: {estimated_seconds:.1f} seconds ({estimated_seconds/60:.1f} minutes)")
@@ -79,31 +75,27 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
     
     # Analyze each d value
     results = []
-    sample_results = {}  # Dictionary to store per-sample results
+    sample_results = {}
     
     with Pool(n_processes) as pool:
         for d in tqdm(d_range, desc="Testing Hill coefficients"):
-            # Prepare arguments for parallel processing
             args = [(L, U, T, d, expected_eq, i) for i, (L, U, T) in enumerate(parameter_matrices)]
-            
-            # Process all samples for this d value in parallel
             sample_matches = pool.map(process_parameter_set, args)
             
-            # Count matches and track which samples matched
             matches = sum(1 for match in sample_matches if match[1])
             percentage = (matches / len(samples)) * 100
             results.append(percentage)
             
-            # Store individual sample results
             sample_results[d] = {
                 'matches': [i for i, (i, match) in enumerate(sample_matches) if match],
                 'failures': [i for i, (i, match) in enumerate(sample_matches) if not match]
             }
             
-            # Print progress update
-            print(f"d={d}: {percentage:.1f}% match ({matches}/{len(samples)} samples)")
-            print(f"  Matched samples: {sample_results[d]['matches']}")
-            print(f"  Failed samples: {sample_results[d]['failures']}")
+            # Only show detailed output if d_range is small
+            if show_detailed:
+                print(f"d={d}: {percentage:.1f}% match ({matches}/{len(samples)} samples)")
+                print(f"  Matched samples: {sample_results[d]['matches']}")
+                print(f"  Failed samples: {sample_results[d]['failures']}")
     
     # Find optimal d value
     optimal_d = d_range[np.argmax(results)]
@@ -117,7 +109,7 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
         "worst_match_d": d_range[np.argmin(results)]
     }
     
-    # Create visualization
+    # Create and save visualization
     plt.figure(figsize=(10, 6))
     plt.bar(d_range, results,
             width=0.8,
@@ -127,8 +119,8 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
             linewidth=0.5)
 
     plt.xlabel('Hill coefficient (d)', fontsize=12)
-    plt.ylabel('Percentage of matches (%)', fontsize=12)
-    plt.title('Percentage of Samples Matching DSGRN Equilibria Count', fontsize=14)
+    plt.ylabel('Percentage (%)', fontsize=12)
+    plt.title('Percentage of samples whose number of equilibria matches DSGRN equilibria count', fontsize=14)
     plt.ylim(0, 100)
     plt.xlim(0, max(d_range))
 
@@ -136,7 +128,25 @@ def analyze_hill_coefficients(network, parameter, samples, d_range=range(1, 51),
     plt.grid(True, axis='y', linestyle='--', alpha=0.7)
     plt.tick_params(axis='both', which='major', labelsize=10)
     
+    # Create figures directory if it doesn't exist
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    figures_dir = os.path.join(root_dir, 'figures')
+    os.makedirs(figures_dir, exist_ok=True)
+    
+    # Save figure with timestamp
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    filename = f"hill_analysis_d{min(d_range)}-{max(d_range)}_{timestamp}.svg"
+    filepath = os.path.join(figures_dir, filename)
+    plt.savefig(filepath, format='svg', bbox_inches='tight')
+    print(f"\nFigure saved as: {filename}")
+    
     plt.show()
+    
+    # Print summary
+    print(f"\nSummary:")
+    print(f"Expected equilibria: {summary['expected_equilibria']}")
+    print(f"Best match: {summary['best_match']:.1f}% at d = {summary['best_match_d']}")
+    print(f"Worst match: {summary['worst_match']:.1f}% at d = {summary['worst_match_d']}")
     
     return results, summary, optimal_d, sample_results
 
