@@ -15,7 +15,7 @@ def main():
     parameter = parameter_graph.parameter(par_index)
     
     # Load and process samples
-    samples = load_samples(par_index)[:10]  # First 10 samples
+    samples = load_samples(par_index)[:1]  # First few samples
     
     # Run analysis
     d_range = range(100, 0, -5)

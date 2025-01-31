@@ -14,7 +14,8 @@ def process_sample(args):
     
     for d in reversed(d_range):  # Process high d first
         stable, _ = find_stable_states(L, U, T, d, prev_states)
-        results.append((d, len(stable)))
+        # Store whether we found exactly 3 stable states
+        results.append((d, len(stable) == 3))  # Changed to store boolean match
         prev_states = stable  # Carry states forward
         
     return sample_idx, sorted(results, reverse=True)
@@ -39,13 +40,14 @@ def analyze_stability_parallel(network, parameter, samples, d_range=range(100, 0
     # Reorganize results by d-value
     d_results = {d: [] for d in d_range}
     for sample_idx, sample_data in results:
-        for d, count in sample_data:
-            d_results[d].append(count)
+        for d, matches in sample_data:
+            d_results[d].append(matches)
     
+    # Calculate percentage of matches for each d
     return {
         'by_sample': results,
-        'by_d': {d: np.mean(counts) for d, counts in d_results.items()}
-    } 
+        'by_d': {d: (sum(matches) / len(matches)) * 100 for d, matches in d_results.items()}
+    }
 
 def plot_stability_results(results, d_range, par_index, expected_stable=3):
     """
@@ -57,12 +59,9 @@ def plot_stability_results(results, d_range, par_index, expected_stable=3):
         par_index: Parameter node index for title
         expected_stable: Number of expected stable equilibria
     """
-    # Process results
+    # Process results 
     d_values = sorted(results['by_d'].keys())
-    percentages = [
-        (np.sum(np.array(results['by_d'][d]) == expected_stable) / len(results['by_d'][d])) * 100
-        for d in d_values
-    ]
+    percentages = [results['by_d'][d] for d in d_values] 
     
     # Create plot
     plt.figure(figsize=(12, 6))
