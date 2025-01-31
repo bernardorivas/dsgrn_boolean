@@ -43,13 +43,13 @@ def plot_nullclines(L, U, T, d, n_points=1000):
     plt.figure(figsize=(10, 10))
     
     # Create contours and get the collections for legend
-    x_nullcline = plt.contour(X, Y, Z1, levels=[0], colors='green')
+    x_nullcline = plt.contour(X, Y, Z1, levels=[0], colors='blue')
     y_nullcline = plt.contour(X, Y, Z2, levels=[0], colors='red')
     
     # Create proxy artists for the legend
     from matplotlib.lines import Line2D
     legend_elements = [
-        Line2D([0], [0], color='green', label="x-nullcline"),
+        Line2D([0], [0], color='blue', label="x-nullcline"),
         Line2D([0], [0], color='red', label="y-nullcline"),
         Line2D([0], [0], color='black', marker='o', label='Stable equilibrium', 
                linestyle='None', markersize=10),
