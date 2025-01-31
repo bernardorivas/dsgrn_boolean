@@ -1,93 +1,171 @@
+import multiprocessing as mp
 import numpy as np
 from tqdm import tqdm
-from multiprocessing import Pool, cpu_count
 from .find_stable_states import find_stable_states
 from .dsgrn_sample_to_matrix import extract_parameter_matrices
 import matplotlib.pyplot as plt
+import os
+from dsgrn_boolean.models.hill import hill
+from dsgrn_boolean.utils.newton import newton_method
 
 def process_sample(args):
-    """Parallel processing wrapper for sample analysis"""
-    sample_idx, network, sample, d_range = args
-    L, U, T = extract_parameter_matrices(sample, network)
-    results = []
-    prev_states = None
+    """
+    Process a single sample.
+    Args:
+      args: a tuple (L, U, T, d, extra) where:
+         - L, U, T are the parameter matrices,
+         - d is the Hill exponent,
+         - extra is a placeholder for future use.
+    Returns:
+      A list of stable equilibrium points found for this sample.
+    """
+    L, U, T, d, extra = args
+    system, jacobian = hill(L, U, T, d)
     
-    for d in reversed(d_range):  # Process high d first
-        stable, _ = find_stable_states(L, U, T, d, prev_states)
-        # Store whether we found exactly 3 stable states
-        results.append((d, len(stable) == 3))  # Changed to store boolean match
-        prev_states = stable  # Carry states forward
+    # Define the grid for initial conditions; use a coarse grid for speed.
+    try:
+        x_max = 1.5 * (U[0,0] + U[1,0])
+        y_max = 1.5 * (U[0,1] * U[1,1])
+    except Exception as e:
+        # Fallback if grid definition encounters issues.
+        x_max = 1.0
+        y_max = 1.0
         
-    return sample_idx, sorted(results, reverse=True)
+    n_grid = 10  # coarse grid to speed up; adjust if needed
+    x_grid = np.linspace(0, x_max, n_grid)
+    y_grid = np.linspace(0, y_max, n_grid)
+    initial_conditions = [np.array([x, y]) for x in x_grid for y in y_grid]
 
-def analyze_stability_parallel(network, parameter, samples, d_range=range(100, 0, -1), n_processes=None):
-    """
-    Parallel stability analysis with continuity tracking.
-    """
-    if n_processes is None:
-        n_processes = max(1, cpu_count() - 1)
-    
-    # Prepare arguments for parallel processing
-    args = [(i, network, s, d_range) for i, s in enumerate(samples)]
-    
-    with Pool(n_processes) as pool:
-        results = list(tqdm(
-            pool.imap(process_sample, args),
-            total=len(samples),
-            desc="Processing samples"
-        ))
-    
-    # Reorganize results by d-value
-    d_results = {d: [] for d in d_range}
-    for sample_idx, sample_data in results:
-        for d, matches in sample_data:
-            d_results[d].append(matches)
-    
-    # Calculate percentage of matches for each d
-    return {
-        'by_sample': results,
-        'by_d': {d: (sum(matches) / len(matches)) * 100 for d, matches in d_results.items()}
-    }
+    stable_equilibria = []
+    for x0 in initial_conditions:
+        x_eq, converged, _ = newton_method(system, x0, df=jacobian)
+        if converged:
+            # Avoid duplicate equilibria.
+            if not any(np.allclose(x_eq, eq, rtol=1e-8) for eq in stable_equilibria):
+                # Determine stability.
+                J = jacobian(x_eq)
+                eigenvals = np.linalg.eigvals(J)
+                if all(np.real(eigenvals) < 0):
+                    stable_equilibria.append(x_eq)
+    return stable_equilibria
 
-def plot_stability_results(results, d_range, par_index, expected_stable=3):
+def analyze_stability_parallel(network, parameter, processed_samples, d_range, visualize=False):
     """
-    Create a bar plot showing percentage of samples with correct number of stable equilibria.
+    Analyze stability for the provided samples in parallel.
     
     Args:
-        results: Output from analyze_stability_parallel
-        d_range: Range of d values used
-        par_index: Parameter node index for title
-        expected_stable: Number of expected stable equilibria
+        network: The DSGRN network (unused in this snippet but provided for context).
+        parameter: The parameter from the DSGRN parameter graph.
+        processed_samples: A list of tuples (L, U, T, d, extra) as input to process_sample.
+        d_range: The range of Hill coefficients (for grouping results).
+        visualize (bool): If True, create plots (not used in this multiprocessing version).
+        
+    Returns:
+        A dictionary with keys 'by_d' where for each d the value is a list of lists containing
+        the stable equilibria for that sample.
     """
-    # Process results 
+    total = len(processed_samples)
+    pool = mp.Pool(processes=mp.cpu_count())
+    chunk_size = max(1, total // mp.cpu_count())
+
+    import time
+    start_time = time.time()
+    results = []
+    progress_bar = tqdm(total=total, desc="Processing samples", dynamic_ncols=True)
+    
+    # Process samples with progress tracking
+    for stable_eq in pool.imap_unordered(process_sample, processed_samples, chunksize=chunk_size):
+        results.append(stable_eq)
+        progress_bar.update(1)
+        
+        # Calculate time statistics
+        elapsed = time.time() - start_time
+        percent_complete = len(results) / total
+        remaining = (elapsed / percent_complete - elapsed) if percent_complete > 0 else 0
+        progress_bar.set_postfix({"ETA": f"{remaining:.1f} sec"})
+    
+    progress_bar.close()
+    pool.close()
+    pool.join()
+
+    # Group results by Hill coefficient
+    results_by_d = {}
+    for sample_info, stable_eq in zip(processed_samples, results):
+        d = sample_info[3]
+        results_by_d.setdefault(d, []).append(stable_eq)
+    
+    total_time = time.time() - start_time
+    print(f"Total processing time: {total_time:.1f} seconds")
+    
+    return {"by_d": results_by_d}
+
+def plot_stability_results(results, d_range, par_index):
+    """
+    Plot the stability results as a bar chart of percentage match.
+    For each Hill coefficient (d), we display the percentage of samples
+    that have a given number of stable states.
+    
+    Args:
+        results (dict): The dictionary returned by analyze_stability_parallel.
+        d_range (range): The range of d values that were analyzed.
+        par_index (int): The parameter index (for title display).
+    
+    Returns:
+        plt.Figure: The matplotlib figure object.
+    """
+    
     d_values = sorted(results['by_d'].keys())
-    percentages = [results['by_d'][d] for d in d_values] 
     
-    # Create plot
-    plt.figure(figsize=(12, 6))
-    bars = plt.bar(d_values, percentages,
-                   width=0.8,
-                   color='steelblue',
-                   alpha=0.8,
-                   edgecolor='black',
-                   linewidth=0.5)
+    # For each d value, count how many samples have a given number of stable states.
+    percentages_by_d = {}  # This will be {d: {num_stable: percentage, ...}, ...}
     
-    # Style matching hill_analysis
-    plt.xlabel('Hill Coefficient (d)', fontsize=12)
-    plt.ylabel('Samples with 3 Stable Equilibria (%)', fontsize=12)
-    plt.title(f'Stability Analysis for Parameter Node {par_index}', fontsize=14)
-    plt.ylim(0, 100)
-    plt.xlim(min(d_range)-1, max(d_range)+1)
-    plt.yticks(range(0, 101, 10))
-    plt.grid(True, axis='y', linestyle='--', alpha=0.7)
-    plt.tick_params(axis='both', which='major', labelsize=10)
+    for d in d_values:
+        sample_list = results['by_d'][d]
+        num_samples = len(sample_list)
+        counts = {}
+        for stable_states in sample_list:
+            num_stable = len(stable_states)
+            counts[num_stable] = counts.get(num_stable, 0) + 1
+        # Convert counts to percentages
+        percentages = {num: count / num_samples for num, count in counts.items()}
+        percentages_by_d[d] = percentages
     
-    # Add value labels on top of bars
-    for bar in bars:
-        height = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width()/2., height,
-                 f'{height:.1f}%',
-                 ha='center', va='bottom',
-                 fontsize=8)
+    # Determine the set of all possible "number of stable states" across all d
+    all_stable_numbers = set()
+    for perc in percentages_by_d.values():
+        all_stable_numbers.update(perc.keys())
+    all_stable_numbers = sorted(all_stable_numbers)
     
-    return plt.gcf() 
+    # Create grouped bar chart data
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # The width of the bars and positions: we arrange each d's bars side-by-side.
+    num_d = len(d_values)
+    bar_width = 0.8 / num_d
+    
+    for i, d in enumerate(d_values):
+        # For each possible number of stable states, get the percentage (or 0 if missing)
+        percentages = [percentages_by_d[d].get(n, 0) for n in all_stable_numbers]
+        # Compute positions shifted for each d group
+        positions = np.array(all_stable_numbers, dtype=float) + i * bar_width
+        ax.bar(positions, percentages, width=bar_width, label=f'd={d}')
+    
+    ax.set_xticks(np.array(all_stable_numbers) + 0.8/2)
+    ax.set_xticklabels(all_stable_numbers)
+    ax.set_xlabel('Number of Stable States')
+    ax.set_ylabel('Percentage of Samples')
+    ax.set_title(f'Stability Analysis Matching Results (Parameter {par_index})')
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize='small', ncol=2)
+    
+    return fig
+
+# For testing, you can run this module directly.
+if __name__ == "__main__":
+    # Dummy test inputs.
+    L = np.array([[1, 0], [0, 1]])
+    U = np.array([[2, 0], [0, 2]])
+    T = np.array([[1.5, 0], [0, 1.5]])
+    processed_samples = [(L, U, T, d, None) for d in range(1, 6)]
+    results = analyze_stability_parallel(None, None, processed_samples, d_range=range(1,6))
+    print(results)
