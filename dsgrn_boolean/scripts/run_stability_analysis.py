@@ -1,10 +1,21 @@
+import DSGRN
 import os
 import time
 import matplotlib.pyplot as plt
 from dsgrn_boolean.utils.hill_stable_analysis import analyze_stability_parallel, plot_stability_results
+from dsgrn_boolean.utils.sample_management import load_samples
 
 def main():
-    # ... (previous setup code) ...
+    # Setup network and parameter
+    net_spec = """x : x + y : E
+                  y : (~x) y : E"""
+    network = DSGRN.Network(net_spec)
+    parameter_graph = DSGRN.ParameterGraph(network)
+    par_index = 98
+    parameter = parameter_graph.parameter(par_index)
+    
+    # Load and process samples
+    samples = load_samples(par_index)[:10]  # First 10 samples
     
     # Run analysis
     d_range = range(100, 0, -5)
