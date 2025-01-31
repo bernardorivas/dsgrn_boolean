@@ -1,0 +1,180 @@
+{
+  "par_index": 98,
+  "success_data": {
+    "2": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "3": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "5": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "7": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "11": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "13": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "17": {
+      "num_samples": 1,
+      "num_success": 1,
+      "num_failures": 0,
+      "success_rate": 1.0,
+      "failure_rate": 0.0
+    },
+    "19": {
+      "num_samples": 1,
+      "num_success": 1,
+      "num_failures": 0,
+      "success_rate": 1.0,
+      "failure_rate": 0.0
+    },
+    "23": {
+      "num_samples": 1,
+      "num_success": 1,
+      "num_failures": 0,
+      "success_rate": 1.0,
+      "failure_rate": 0.0
+    },
+    "29": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "31": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "37": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "41": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "43": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "47": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "53": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "59": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "61": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "67": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "71": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "73": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "79": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "83": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "89": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    },
+    "97": {
+      "num_samples": 1,
+      "num_success": 0,
+      "num_failures": 1,
+      "success_rate": 0.0,
+      "failure_rate": 1.0
+    }
+  }
+}

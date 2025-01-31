@@ -37,7 +37,7 @@ def load_samples(par_index, network=None, parameter=None, force_regenerate=False
         with open(filename, 'r') as f:
             # Keep samples as JSON strings (don't convert to dict)
             samples = [line.strip() for line in f]
-        print(f"Loaded {len(samples)} samples for parameter node {par_index}")
+        # print(f"Loaded {len(samples)} samples for parameter node {par_index}")
         return samples
     else:
         if network is None or parameter is None:

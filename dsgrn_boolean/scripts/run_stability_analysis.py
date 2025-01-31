@@ -18,31 +18,28 @@ def main():
     parameter = parameter_graph.parameter(par_index)
     
     # Load and process samples
-    # load_samples(par_index, network=None, parameter=None, force_regenerate=False, filtered=False, filter_tol=0.1):
-    samples = load_samples(par_index, filtered=True, filter_tol=0.1)[:3]  # Use a single sample for now
+    samples = load_samples(par_index, filtered=True, filter_tol=0.1)[:10]  # First few samples
     
-    # Define d_range. Here we use primes from 2 up to 97 as an example.
+    # Define d_range (using primes up to 100)
     # d_range = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
     d_range = range(1,101)
     
-    # Convert samples to the format expected by analyze_stability_parallel.
+    # Convert samples to the format expected by analyze_stability_parallel
     processed_samples = []
     for sample in samples:
         L, U, T = extract_parameter_matrices(sample, network)
-        for d in d_range:
-            processed_samples.append((L, U, T, d, None))
+        processed_samples.append((L, U, T))
     
-    # Run analysis (visualize is False because we only want the success/failure statistics)
+    # Run analysis
     results = analyze_stability_parallel(
         network,
         parameter,
         processed_samples,
         d_range=d_range,
-        visualize=False,
+        # n_processes=4  # Adjust based on your system
     )
     
-    # Calculate success/failure rates.
-    # We define a "success" for a given d if a sample yields exactly three stable states.
+    # Calculate success/failure rates
     success_data = {}  # key: d, value: statistics dictionary
     for d, sample_list in results['by_d'].items():
         num_samples = len(sample_list)
@@ -56,7 +53,7 @@ def main():
             "failure_rate": num_failures / num_samples if num_samples > 0 else 0,
         }
     
-    # Store success_data along with the par_index into a JSON file so you don't have to re-run.
+    # Store success_data along with the par_index into a JSON file
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(root_dir, "stability_data")
     os.makedirs(data_dir, exist_ok=True)

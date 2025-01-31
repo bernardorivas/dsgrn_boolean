@@ -7,156 +7,201 @@ import matplotlib.pyplot as plt
 import os
 from dsgrn_boolean.models.hill import hill
 from dsgrn_boolean.utils.newton import newton_method
+from scipy.integrate import solve_ivp
+import time
+from multiprocessing import Pool
+
+def integrate_system(system, x0, t_span=(0, 20), rtol=1e-4):
+    """Integrate ODE system to find stable equilibria"""
+    def event(t, x):
+        return np.linalg.norm(system(x)) - 1e-4  # Relaxed tolerance
+    event.terminal = True
+    event.direction = -1
+    
+    sol = solve_ivp(
+        lambda t, x: system(x),
+        t_span,
+        x0,
+        method='RK45',
+        events=event,
+        rtol=rtol,
+        atol=1e-6,
+        max_step=0.1
+    )
+    
+    final_deriv = np.linalg.norm(system(sol.y[:, -1]))
+    has_converged = final_deriv < 1e-3 or sol.status == 1
+    
+    return sol.y[:, -1], has_converged
+
+def is_new_point(point, existing_points, rtol=1e-8):
+    """Check if a point is significantly different from existing points"""
+    return not any(np.allclose(point, p, rtol=rtol) for p in existing_points)
 
 def process_sample(args):
     """
-    Process a single sample.
-    Args:
-      args: a tuple (L, U, T, d, extra) where:
-         - L, U, T are the parameter matrices,
-         - d is the Hill exponent,
-         - extra is a placeholder for future use.
-    Returns:
-      A list of stable equilibrium points found for this sample.
+    Process a single sample with enhanced stable state finding strategy.
     """
-    L, U, T, d, extra = args
+    L, U, T, d, prev_states = args  # Note: prev_states is now used
     system, jacobian = hill(L, U, T, d)
     
-    # Define the grid for initial conditions; use a coarse grid for speed.
-    try:
-        x_max = 1.5 * (U[0,0] + U[1,0])
-        y_max = 1.5 * (U[0,1] * U[1,1])
-    except Exception as e:
-        # Fallback if grid definition encounters issues.
-        x_max = 1.0
-        y_max = 1.0
-        
-    n_grid = 10  # coarse grid to speed up; adjust if needed
-    x_grid = np.linspace(0, x_max, n_grid)
-    y_grid = np.linspace(0, y_max, n_grid)
-    initial_conditions = [np.array([x, y]) for x in x_grid for y in y_grid]
-
+    print(f"\nProcessing sample for d={d}")
+    
     stable_equilibria = []
-    for x0 in initial_conditions:
-        x_eq, converged, _ = newton_method(system, x0, df=jacobian)
-        if converged:
-            # Avoid duplicate equilibria.
-            if not any(np.allclose(x_eq, eq, rtol=1e-8) for eq in stable_equilibria):
-                # Determine stability.
+    
+    # Step 0: If we have previous states, try them first
+    if prev_states is not None and len(prev_states) > 0:
+        print(f"Trying previous states from d>{d}: {prev_states}")
+        for x0 in prev_states:
+            x_eq, converged, _ = newton_method(system, x0, df=jacobian)
+            if converged:
                 J = jacobian(x_eq)
                 eigenvals = np.linalg.eigvals(J)
-                if all(np.real(eigenvals) < 0):
+                if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                     stable_equilibria.append(x_eq)
+                    print(f"Found stable state from previous d at {x_eq}")
+    
+    # If we haven't found all three stable states, proceed with the other strategies
+    if len(stable_equilibria) < 3:
+        # Step 1: Try specific points
+        specific_points = [
+            np.array([T[0,1], T[1,0]]),  # Point from threshold matrix
+            np.array([0., 0.]),          # Origin
+            np.array([U[0,0], U[1,1]])   # Upper bounds point
+        ]
+        
+        print(f"Trying specific points: {specific_points}")
+        
+        for x0 in specific_points:
+            x_eq, converged, _ = newton_method(system, x0, df=jacobian)
+            if converged:
+                J = jacobian(x_eq)
+                eigenvals = np.linalg.eigvals(J)
+                if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
+                    stable_equilibria.append(x_eq)
+                    print(f"Found stable state at {x_eq}")
+    
+        # Step 2: If still haven't found all three, try grid around specific points
+        if len(stable_equilibria) < 3:
+            print("Didn't find all stable states, trying grid around specific points...")
+            for center in specific_points:
+                grid_size = 5
+                perturbations = np.linspace(-0.5, 0.5, grid_size)
+                for dx in perturbations:
+                    for dy in perturbations:
+                        x0 = center + np.array([dx, dy])
+                        x_eq, converged, _ = newton_method(system, x0, df=jacobian)
+                        if converged:
+                            J = jacobian(x_eq)
+                            eigenvals = np.linalg.eigvals(J)
+                            if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
+                                stable_equilibria.append(x_eq)
+                                print(f"Found additional stable state at {x_eq}")
+        
+        # Step 3: If still haven't found all three, try forward integration
+        if len(stable_equilibria) < 3:
+            print("Still missing stable states, trying forward integration...")
+            additional_points = [
+                np.array([0, U[1,1]]),
+                np.array([U[0,0], 0]),
+                np.array([U[0,0]/2, U[1,1]/2])
+            ]
+            
+            for x0 in additional_points:
+                x_integrated, converged = integrate_system(system, x0)
+                if converged:
+                    x_eq, converged, _ = newton_method(system, x_integrated, df=jacobian)
+                    if converged:
+                        J = jacobian(x_eq)
+                        eigenvals = np.linalg.eigvals(J)
+                        if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
+                            stable_equilibria.append(x_eq)
+                            print(f"Found stable state through integration at {x_eq}")
+    
+    print(f"Final count: Found {len(stable_equilibria)} stable states for d={d}")
     return stable_equilibria
 
-def analyze_stability_parallel(network, parameter, processed_samples, d_range, visualize=False):
+def process_sample_sequence(sample, d_range):
     """
-    Analyze stability for the provided samples in parallel.
+    Process a single sample through all d values in sequence (large to small).
     
     Args:
-        network: The DSGRN network (unused in this snippet but provided for context).
-        parameter: The parameter from the DSGRN parameter graph.
-        processed_samples: A list of tuples (L, U, T, d, extra) as input to process_sample.
-        d_range: The range of Hill coefficients (for grouping results).
-        visualize (bool): If True, create plots (not used in this multiprocessing version).
-        
+        sample: tuple (L, U, T) matrices for this sample
+        d_range: list of d values to process
     Returns:
-        A dictionary with keys 'by_d' where for each d the value is a list of lists containing
-        the stable equilibria for that sample.
+        dict: Results for this sample, keyed by d
     """
-    total = len(processed_samples)
-    pool = mp.Pool(processes=mp.cpu_count())
-    chunk_size = max(1, total // mp.cpu_count())
-
-    import time
-    start_time = time.time()
-    results = []
-    progress_bar = tqdm(total=total, desc="Processing samples", dynamic_ncols=True)
-    
-    # Process samples with progress tracking
-    for stable_eq in pool.imap_unordered(process_sample, processed_samples, chunksize=chunk_size):
-        results.append(stable_eq)
-        progress_bar.update(1)
-        
-        # Calculate time statistics
-        elapsed = time.time() - start_time
-        percent_complete = len(results) / total
-        remaining = (elapsed / percent_complete - elapsed) if percent_complete > 0 else 0
-        progress_bar.set_postfix({"ETA": f"{remaining:.1f} sec"})
-    
-    progress_bar.close()
-    pool.close()
-    pool.join()
-
-    # Group results by Hill coefficient
-    results_by_d = {}
-    for sample_info, stable_eq in zip(processed_samples, results):
-        d = sample_info[3]
-        results_by_d.setdefault(d, []).append(stable_eq)
-    
-    total_time = time.time() - start_time
-    print(f"Total processing time: {total_time:.1f} seconds")
-    
-    return {"by_d": results_by_d}
-
-def plot_stability_results(results, d_range, par_index):
-    """
-    Plot the stability results as a bar chart of percentage match.
-    For each Hill coefficient (d), we display the percentage of samples
-    that have a given number of stable states.
-    
-    Args:
-        results (dict): The dictionary returned by analyze_stability_parallel.
-        d_range (range): The range of d values that were analyzed.
-        par_index (int): The parameter index (for title display).
-    
-    Returns:
-        plt.Figure: The matplotlib figure object.
-    """
-    
-    d_values = sorted(results['by_d'].keys())
-    
-    # For each d value, count how many samples have a given number of stable states.
-    percentages_by_d = {}  # This will be {d: {num_stable: percentage, ...}, ...}
+    L, U, T = sample
+    d_values = sorted(d_range, reverse=True)  # Ensure large to small
+    results = {}
+    prev_states = None
     
     for d in d_values:
-        sample_list = results['by_d'][d]
-        num_samples = len(sample_list)
-        counts = {}
-        for stable_states in sample_list:
-            num_stable = len(stable_states)
-            counts[num_stable] = counts.get(num_stable, 0) + 1
-        # Convert counts to percentages
-        percentages = {num: count / num_samples for num, count in counts.items()}
-        percentages_by_d[d] = percentages
+        stable_eq = process_sample((L, U, T, d, prev_states))
+        results[d] = stable_eq
+        prev_states = stable_eq
     
-    # Determine the set of all possible "number of stable states" across all d
-    all_stable_numbers = set()
-    for perc in percentages_by_d.values():
-        all_stable_numbers.update(perc.keys())
-    all_stable_numbers = sorted(all_stable_numbers)
+    return results
+
+def analyze_stability_parallel(network, parameter, samples, d_range, n_processes=None):
+    """
+    Parallel analysis of samples, where each process handles a complete
+    d-sequence for its assigned samples.
     
-    # Create grouped bar chart data
+    Args:
+        network: DSGRN network
+        parameter: DSGRN parameter
+        samples: list of (L, U, T) samples to process
+        d_range: list of d values to process
+        n_processes: number of processes to use
+    Returns:
+        dict: Combined results from all processes
+    """
+    if n_processes is None:
+        n_processes = os.cpu_count()
+    
+    # Split samples into chunks for each process
+    chunk_size = len(samples) // n_processes + (1 if len(samples) % n_processes else 0)
+    sample_chunks = [samples[i:i + chunk_size] for i in range(0, len(samples), chunk_size)]
+    
+    # Process chunks in parallel
+    with Pool(processes=n_processes) as pool:
+        chunk_results = list(tqdm(
+            pool.starmap(
+                process_sample_sequence,
+                [(chunk, d_range) for chunk in sample_chunks]
+            ),
+            total=len(sample_chunks),
+            desc="Processing sample chunks"
+        ))
+    
+    # Combine results from all chunks
+    combined_results = {"by_d": {}}
+    for d in d_range:
+        combined_results["by_d"][d] = []
+        for chunk_result in chunk_results:
+            combined_results["by_d"][d].extend(chunk_result[d])
+    
+    return combined_results
+
+def plot_stability_results(results, d_range, par_index):
+    """Plot success rates for each d value"""
+    d_values = sorted(results['by_d'].keys())
+    success_rates = []
+    
+    for d in d_values:
+        samples = results['by_d'][d]
+        num_samples = len(samples)
+        num_success = sum(1 for stable_states in samples if len(stable_states) > 0)
+        success_rates.append(100 * num_success / num_samples)
+    
     fig, ax = plt.subplots(figsize=(10, 6))
+    ax.bar(d_values, success_rates, color='skyblue')
     
-    # The width of the bars and positions: we arrange each d's bars side-by-side.
-    num_d = len(d_values)
-    bar_width = 0.8 / num_d
-    
-    for i, d in enumerate(d_values):
-        # For each possible number of stable states, get the percentage (or 0 if missing)
-        percentages = [percentages_by_d[d].get(n, 0) for n in all_stable_numbers]
-        # Compute positions shifted for each d group
-        positions = np.array(all_stable_numbers, dtype=float) + i * bar_width
-        ax.bar(positions, percentages, width=bar_width, label=f'd={d}')
-    
-    ax.set_xticks(np.array(all_stable_numbers) + 0.8/2)
-    ax.set_xticklabels(all_stable_numbers)
-    ax.set_xlabel('Number of Stable States')
-    ax.set_ylabel('Percentage of Samples')
-    ax.set_title(f'Stability Analysis Matching Results (Parameter {par_index})')
+    ax.set_xlabel('Hill Coefficient (d)')
+    ax.set_ylabel('Success Rate (%)')
+    ax.set_title(f'Stability Analysis Success Rates (Parameter {par_index})')
     ax.grid(True, alpha=0.3)
-    ax.legend(fontsize='small', ncol=2)
     
     return fig
 
