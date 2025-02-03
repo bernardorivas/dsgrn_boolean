@@ -1,73 +1,57 @@
 import os
 import json
-import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 
-def analyze_stability_data(par_index: int, d_values: Optional[List[int]] = None) -> Dict:
+def analyze_failures_at_d(d_value: int) -> None:
     """
-    Analyze stability data for a given parameter index across different d values.
+    Analyze and print which parameter indices failed at a specific d value.
+    Reads from the JSON files saved by run_stability_analysis.py
     
     Args:
-        par_index: Parameter node index
-        d_values: Optional list of d values to analyze. If None, analyzes all available d values.
-        
-    Returns:
-        Dictionary containing analysis results:
-        {
-            'mean_success_rate': float,
-            'std_success_rate': float,
-            'max_success_rate': float,
-            'min_success_rate': float,
-            'best_d_values': List[int],  # d values with highest success rate
-            'success_rates': Dict[str, float],  # success rate for each d value
-            'sample_counts': Dict[str, int]  # number of samples for each d value
-        }
+        d_value: The Hill coefficient value to analyze
     """
     # Get the project root directory
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     stability_dir = os.path.join(root_dir, 'stability_data')
     
-    # Find all stability data files for this parameter index
+    # Find all stability data files
     stability_files = [f for f in os.listdir(stability_dir) 
-                      if f.startswith(f'parindex_{par_index}_stability_data_')]
+                      if f.startswith('parindex_') and 'detailed_stability' in f]
     
     if not stability_files:
-        raise FileNotFoundError(f"No stability data found for parameter index {par_index}")
+        print("No stability data files found.")
+        return
     
-    # Use the most recent file
-    latest_file = sorted(stability_files)[-1]
-    file_path = os.path.join(stability_dir, latest_file)
+    print(f"\nAnalysis for d = {d_value}:")
+    print("-" * 50)
     
-    with open(file_path, 'r') as f:
-        data = json.load(f)
-    
-    success_data = data['success_data']
-    
-    # Filter d values if specified
-    if d_values is not None:
-        success_data = {str(d): data for d, data in success_data.items() if int(d) in d_values}
-    
-    # Calculate statistics
-    success_rates = {d: data['success_rate'] for d, data in success_data.items()}
-    sample_counts = {d: data['num_samples'] for d, data in success_data.items()}
-    
-    rates = np.array(list(success_rates.values()))
-    mean_rate = np.mean(rates)
-    std_rate = np.std(rates)
-    max_rate = np.max(rates)
-    min_rate = np.min(rates)
-    
-    # Find d values with highest success rate
-    best_rate = max_rate
-    best_d_values = [int(d) for d, rate in success_rates.items() 
-                    if abs(rate - best_rate) < 1e-10]
-    
-    return {
-        'mean_success_rate': float(mean_rate),
-        'std_success_rate': float(std_rate),
-        'max_success_rate': float(max_rate),
-        'min_success_rate': float(min_rate),
-        'best_d_values': best_d_values,
-        'success_rates': success_rates,
-        'sample_counts': sample_counts
-    } 
+    # Analyze each parameter's data
+    for filename in stability_files:
+        with open(os.path.join(stability_dir, filename), 'r') as f:
+            data = json.load(f)
+        
+        par_index = data['par_index']
+        d_str = str(d_value)
+        
+        if d_str in data['by_d']:
+            d_data = data['by_d'][d_str]
+            success_rate = d_data['success_rate'] * 100
+            
+            print(f"\nParameter Index {par_index}:")
+            print(f"Success Rate: {success_rate:.1f}%")
+            print(f"Failed Samples: {d_data['num_failures']}/{d_data['num_samples']}")
+            
+            if d_data['num_failures'] > 0:
+                print("\nFailed Sample Details:")
+                for result in d_data['sample_results']:
+                    if not result['success']:
+                        print(f"  Sample {result['sample_index']}:")
+                        print(f"    Found {result['num_stable_states']} stable states")
+                        if result['stable_states']:
+                            print("    Stable states found:")
+                            for state in result['stable_states']:
+                                print(f"      {state}")
+
+if __name__ == "__main__":
+    # Example usage
+    analyze_failures_at_d(42) 

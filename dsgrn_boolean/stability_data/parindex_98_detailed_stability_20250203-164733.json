@@ -1,0 +1,39 @@
+{
+  "par_index": 98,
+  "timestamp": "20250203-164733",
+  "network_spec": "x : x + y : E\n                  y : (~x) y : E",
+  "d_range": [
+    100
+  ],
+  "num_samples": 1,
+  "by_d": {
+    "100": {
+      "num_samples": 1,
+      "num_success": 1,
+      "num_failures": 0,
+      "success_rate": 1.0,
+      "failure_rate": 0.0,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 3,
+          "stable_states": [
+            [
+              3.070827147573851,
+              0.8987417139588649
+            ],
+            [
+              0.21952044398560103,
+              0.04887756227093872
+            ],
+            [
+              2.1324954809660386,
+              4.8184386811946815
+            ]
+          ],
+          "success": true
+        }
+      ]
+    }
+  }
+}

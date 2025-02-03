@@ -1,4 +1,5 @@
 import DSGRN
+import DSGRN_utils
 import os
 import time
 import json
@@ -9,20 +10,29 @@ from dsgrn_boolean.utils.sample_management import load_samples
 from dsgrn_boolean.utils.dsgrn_sample_to_matrix import extract_parameter_matrices
 from multiprocessing import cpu_count
 
-def main():
+def main(par_index: int = 98):
     # Setup network and parameter
     net_spec = """x : x + y : E
                   y : (~x) y : E"""
     network = DSGRN.Network(net_spec)
     parameter_graph = DSGRN.ParameterGraph(network)
-    par_index = 98
     parameter = parameter_graph.parameter(par_index)
+    
+    morse_graph, stg, graded_complex = DSGRN_utils.ConleyMorseGraph(parameter)
+
+    n_equilibria = 0
+    for v in morse_graph.vertices():
+        if not morse_graph.adjacencies(v):
+            n_equilibria += 1
+
+    print(f"Number of equilibria expected: {n_equilibria}")
     
     # Load and process samples
     samples = load_samples(par_index, filtered=True, filter_tol=0.1)
+    samples = samples[:10]
     
     # Optimize d_range: Use fewer points but strategically placed
-    d_range = list(range(1,101))
+    d_range = list(range(0,101))
     
     # Pre-allocate processed_samples list
     processed_samples = [(extract_parameter_matrices(sample, network)) 
@@ -34,6 +44,7 @@ def main():
         network,
         parameter,
         processed_samples,
+        n_equilibria,
         d_range=d_range,
         n_processes=n_processes
     )
@@ -50,7 +61,7 @@ def main():
     
     for d, sample_list in results['by_d'].items():
         num_samples = len(sample_list)
-        success_array = np.array([len(stable_states) == 3 for stable_states in sample_list])
+        success_array = np.array([len(stable_states) == n_equilibria for stable_states in sample_list])
         num_success = np.sum(success_array)
         num_failures = num_samples - num_success
         
@@ -66,7 +77,7 @@ def main():
                     "sample_index": i,
                     "num_stable_states": len(stable_states),
                     "stable_states": [state.tolist() for state in stable_states],  # Convert numpy arrays to lists
-                    "success": len(stable_states) == 3
+                    "success": len(stable_states) == n_equilibria
                 }
                 for i, stable_states in enumerate(sample_list)
             ]
@@ -92,6 +103,7 @@ def main():
     ax.set_ylabel('Matching Success (%)')
     ax.set_title(f'Matching Success Rates vs Hill Coefficient (Parameter {par_index})')
     ax.set_ylim(0, 110)
+    ax.set_xlim(0, max(d_values)+1)
     ax.grid(True, linestyle='--', alpha=0.7)
     
     figures_dir = os.path.join(root_dir, 'figures')

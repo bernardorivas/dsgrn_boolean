@@ -10,7 +10,7 @@ from dsgrn_boolean.utils.newton import newton_method
 from scipy.integrate import solve_ivp
 import time
 from multiprocessing import Pool
-
+from itertools import product
 def integrate_system(system, x0, t_span=(0, 20), rtol=1e-4):
     """Integrate ODE system to find stable equilibria"""
     def event(t, x):
@@ -42,7 +42,7 @@ def process_sample(args):
     """
     Process a single sample with enhanced stable state finding strategy.
     """
-    L, U, T, d, prev_states = args
+    L, U, T, d, prev_states, n_equilibria= args
     system, jacobian = hill(L, U, T, d)
     
     stable_equilibria = []
@@ -58,13 +58,28 @@ def process_sample(args):
                     stable_equilibria.append(x_eq)
     
     # If we haven't found all three stable states, proceed with other strategies
-    if len(stable_equilibria) < 3:
+    if len(stable_equilibria) < n_equilibria:
         # Step 1: Try specific points
-        specific_points = [
-            np.array([T[0,1], T[1,0]]),
-            np.array([0., 0.]),
-            np.array([U[0,0], U[1,1]])
+        x_coords = [
+            T[0,0],              # Threshold
+            T[0,1],              # Threshold
+            L[0,0] + L[1,0],     # x-nullcline
+            U[0,0] + L[1,0],     # x-nullcline
+            L[0,0] + U[1,0],     # x-nullcline
+            U[0,0] + U[1,0]      # x-nullcline
         ]
+        
+        y_coords = [
+            T[1,0],              # Threshold
+            T[1,1],              # Threshold
+            L[0,1] * L[1,1],     # y-nullcline
+            U[0,1] * L[1,1],     # y-nullcline
+            L[0,1] * U[1,1],     # y-nullcline
+            U[0,1] * U[1,1]      # y-nullcline
+        ]
+        
+        # Create all possible combinations
+        specific_points = [np.array([x, y]) for x, y in product(x_coords, y_coords)]
         
         for x0 in specific_points:
             x_eq, converged, _ = newton_method(system, x0, df=jacobian)
@@ -74,8 +89,8 @@ def process_sample(args):
                 if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                     stable_equilibria.append(x_eq)
     
-        # Step 2: If still haven't found all three, try grid around specific points
-        if len(stable_equilibria) < 3:
+        # Step 2: If still haven't found all, try grid around specific points
+        if len(stable_equilibria) < n_equilibria:
             for center in specific_points:
                 grid_size = 5
                 perturbations = np.linspace(-0.5, 0.5, grid_size)
@@ -90,14 +105,8 @@ def process_sample(args):
                                 stable_equilibria.append(x_eq)
     
         # Step 3: If still haven't found all three, try forward integration
-        if len(stable_equilibria) < 3:
-            additional_points = [
-                np.array([0, U[1,1]]),
-                np.array([U[0,0], 0]),
-                np.array([U[0,0]/2, U[1,1]/2])
-            ]
-            
-            for x0 in additional_points:
+        if len(stable_equilibria) < n_equilibria:
+            for x0 in specific_points:
                 x_integrated, converged = integrate_system(system, x0)
                 if converged:
                     x_eq, converged, _ = newton_method(system, x_integrated, df=jacobian)
@@ -109,7 +118,7 @@ def process_sample(args):
     
     return stable_equilibria
 
-def process_sample_sequence(samples, d_range):
+def process_sample_sequence(samples, d_range, n_equilibria):
     """
     Process a chunk of samples through all d values in sequence (large to small).
     
@@ -129,13 +138,13 @@ def process_sample_sequence(samples, d_range):
         
         # Process this sample through all d values
         for d in d_values:
-            stable_eq = process_sample((L, U, T, d, prev_states))
+            stable_eq = process_sample((L, U, T, d, prev_states, n_equilibria))
             results[d].append(stable_eq)
             prev_states = stable_eq
     
     return results
 
-def analyze_stability_parallel(network, parameter, samples, d_range, n_processes=None):
+def analyze_stability_parallel(network, parameter, samples, n_equilibria, d_range, n_processes=None):
     """
     Parallel analysis of samples, where each process handles a complete
     d-sequence for its assigned samples.
@@ -158,7 +167,7 @@ def analyze_stability_parallel(network, parameter, samples, d_range, n_processes
         
         # Process each chunk and update progress
         for chunk in sample_chunks:
-            result = pool.apply(process_sample_sequence, args=(chunk, d_range))
+            result = pool.apply(process_sample_sequence, args=(chunk, d_range, n_equilibria))
             chunk_results.append(result)
             pbar.update(1)
     
