@@ -177,19 +177,14 @@ def find_stable_states(L, U, T, d, previous_states=None, use_newton_backup=False
         x0 = np.array([T[0,1], T[1,0]])
         vector_field_value = system(x0)
         vector_field_norm = np.linalg.norm(vector_field_value)
-        # print(f"Backup plan failed to find all 3 stable states. Vector field norm at (T[0,1], T[1,0]) is: {vector_field_norm}")
     
     # Create visualization if requested
     if visualize:
         fig = plot_phase_space(L, U, T, d, specific_points, stable_points, unstable_points)
-        
-        # Save the figure to a file
         filename = f"phase_space_d_{d}.png"
         filepath = os.path.join("phase_space_plots", filename)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         fig.savefig(filepath)
-        print(f"Phase space plot saved to: {filepath}")
-        
         return stable_points, unstable_points, fig
     
     return stable_points, unstable_points 

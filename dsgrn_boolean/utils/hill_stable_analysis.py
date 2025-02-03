@@ -42,16 +42,13 @@ def process_sample(args):
     """
     Process a single sample with enhanced stable state finding strategy.
     """
-    L, U, T, d, prev_states = args  # Note: prev_states is now used
+    L, U, T, d, prev_states = args
     system, jacobian = hill(L, U, T, d)
-    
-    print(f"\nProcessing sample for d={d}")
     
     stable_equilibria = []
     
     # Step 0: If we have previous states, try them first
     if prev_states is not None and len(prev_states) > 0:
-        print(f"Trying previous states from d>{d}: {prev_states}")
         for x0 in prev_states:
             x_eq, converged, _ = newton_method(system, x0, df=jacobian)
             if converged:
@@ -59,18 +56,15 @@ def process_sample(args):
                 eigenvals = np.linalg.eigvals(J)
                 if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                     stable_equilibria.append(x_eq)
-                    print(f"Found stable state from previous d at {x_eq}")
     
-    # If we haven't found all three stable states, proceed with the other strategies
+    # If we haven't found all three stable states, proceed with other strategies
     if len(stable_equilibria) < 3:
         # Step 1: Try specific points
         specific_points = [
-            np.array([T[0,1], T[1,0]]),  # Point from threshold matrix
-            np.array([0., 0.]),          # Origin
-            np.array([U[0,0], U[1,1]])   # Upper bounds point
+            np.array([T[0,1], T[1,0]]),
+            np.array([0., 0.]),
+            np.array([U[0,0], U[1,1]])
         ]
-        
-        print(f"Trying specific points: {specific_points}")
         
         for x0 in specific_points:
             x_eq, converged, _ = newton_method(system, x0, df=jacobian)
@@ -79,11 +73,9 @@ def process_sample(args):
                 eigenvals = np.linalg.eigvals(J)
                 if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                     stable_equilibria.append(x_eq)
-                    print(f"Found stable state at {x_eq}")
     
         # Step 2: If still haven't found all three, try grid around specific points
         if len(stable_equilibria) < 3:
-            print("Didn't find all stable states, trying grid around specific points...")
             for center in specific_points:
                 grid_size = 5
                 perturbations = np.linspace(-0.5, 0.5, grid_size)
@@ -96,11 +88,9 @@ def process_sample(args):
                             eigenvals = np.linalg.eigvals(J)
                             if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                                 stable_equilibria.append(x_eq)
-                                print(f"Found additional stable state at {x_eq}")
-        
+    
         # Step 3: If still haven't found all three, try forward integration
         if len(stable_equilibria) < 3:
-            print("Still missing stable states, trying forward integration...")
             additional_points = [
                 np.array([0, U[1,1]]),
                 np.array([U[0,0], 0]),
@@ -116,30 +106,32 @@ def process_sample(args):
                         eigenvals = np.linalg.eigvals(J)
                         if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                             stable_equilibria.append(x_eq)
-                            print(f"Found stable state through integration at {x_eq}")
     
-    print(f"Final count: Found {len(stable_equilibria)} stable states for d={d}")
     return stable_equilibria
 
-def process_sample_sequence(sample, d_range):
+def process_sample_sequence(samples, d_range):
     """
-    Process a single sample through all d values in sequence (large to small).
+    Process a chunk of samples through all d values in sequence (large to small).
     
     Args:
-        sample: tuple (L, U, T) matrices for this sample
+        samples: list of tuples, each tuple containing (L, U, T) matrices for a sample
         d_range: list of d values to process
     Returns:
-        dict: Results for this sample, keyed by d
+        dict: Results for these samples, keyed by d
     """
-    L, U, T = sample
     d_values = sorted(d_range, reverse=True)  # Ensure large to small
-    results = {}
-    prev_states = None
+    results = {d: [] for d in d_values}
     
-    for d in d_values:
-        stable_eq = process_sample((L, U, T, d, prev_states))
-        results[d] = stable_eq
-        prev_states = stable_eq
+    # Process each sample in the chunk
+    for sample in samples:
+        L, U, T = sample
+        prev_states = None
+        
+        # Process this sample through all d values
+        for d in d_values:
+            stable_eq = process_sample((L, U, T, d, prev_states))
+            results[d].append(stable_eq)
+            prev_states = stable_eq
     
     return results
 
@@ -147,33 +139,30 @@ def analyze_stability_parallel(network, parameter, samples, d_range, n_processes
     """
     Parallel analysis of samples, where each process handles a complete
     d-sequence for its assigned samples.
-    
-    Args:
-        network: DSGRN network
-        parameter: DSGRN parameter
-        samples: list of (L, U, T) samples to process
-        d_range: list of d values to process
-        n_processes: number of processes to use
-    Returns:
-        dict: Combined results from all processes
     """
     if n_processes is None:
         n_processes = os.cpu_count()
     
     # Split samples into chunks for each process
-    chunk_size = len(samples) // n_processes + (1 if len(samples) % n_processes else 0)
+    chunk_size = max(1, len(samples) // n_processes)
     sample_chunks = [samples[i:i + chunk_size] for i in range(0, len(samples), chunk_size)]
+    
+    # Create progress bar for total chunks
+    total_chunks = len(sample_chunks)
+    pbar = tqdm(total=total_chunks, desc="Processing chunks", position=0, leave=True)
     
     # Process chunks in parallel
     with Pool(processes=n_processes) as pool:
-        chunk_results = list(tqdm(
-            pool.starmap(
-                process_sample_sequence,
-                [(chunk, d_range) for chunk in sample_chunks]
-            ),
-            total=len(sample_chunks),
-            desc="Processing sample chunks"
-        ))
+        # Initialize empty results list
+        chunk_results = []
+        
+        # Process each chunk and update progress
+        for chunk in sample_chunks:
+            result = pool.apply(process_sample_sequence, args=(chunk, d_range))
+            chunk_results.append(result)
+            pbar.update(1)
+    
+    pbar.close()
     
     # Combine results from all chunks
     combined_results = {"by_d": {}}
