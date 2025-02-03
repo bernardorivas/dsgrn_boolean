@@ -3,6 +3,35 @@ import matplotlib.pyplot as plt
 from .newton import newton_method
 from dsgrn_boolean.models.hill import HillFunction
 from dsgrn_boolean.models.hill import hill
+from scipy.integrate import solve_ivp
+from itertools import product
+
+def integrate_system(system, x0, t_span=(0, 20), rtol=1e-4):
+    """Integrate ODE system to find stable equilibria"""
+    def event(t, x):
+        return np.linalg.norm(system(x)) - 1e-4  # Relaxed tolerance
+    event.terminal = True
+    event.direction = -1
+    
+    sol = solve_ivp(
+        lambda t, x: system(x),
+        t_span,
+        x0,
+        method='RK45',
+        events=event,
+        rtol=rtol,
+        atol=1e-6,
+        max_step=0.1
+    )
+    
+    final_deriv = np.linalg.norm(system(sol.y[:, -1]))
+    has_converged = final_deriv < 1e-3 or sol.status == 1
+    
+    return sol.y[:, -1], has_converged
+
+def is_new_point(point, existing_points, rtol=1e-8):
+    """Check if point is significantly different from existing points"""
+    return not any(np.allclose(point, p, rtol=rtol) for p in existing_points)
 
 def plot_nullclines(L, U, T, d, n_points=1000):
     """
@@ -75,44 +104,77 @@ def plot_nullclines(L, U, T, d, n_points=1000):
     # Remove grid, keep only axes
     plt.grid(False)
     
-    # Add intersections (equilibria)
+    # Get system and jacobian
     system, jacobian = hill(L, U, T, d)
     
-    # Find zeros using newton method with more initial conditions
-    n_grid = 10 
-    x_grid = np.linspace(0, x_max, n_grid)
-    y_grid = np.linspace(0, y_max, n_grid)
-    initial_conditions = [np.array([x, y]) for x in x_grid for y in y_grid]
+    # Define specific points to try
+    x_coords = [
+        T[0,0],              # Threshold
+        T[0,1],              # Threshold
+        L[0,0] + L[1,0],     # x-nullcline
+        U[0,0] + L[1,0],     # x-nullcline
+        L[0,0] + U[1,0],     # x-nullcline
+        U[0,0] + U[1,0]      # x-nullcline
+    ]
     
+    y_coords = [
+        T[1,0],              # Threshold
+        T[1,1],              # Threshold
+        L[0,1] * L[1,1],     # y-nullcline
+        U[0,1] * L[1,1],     # y-nullcline
+        L[0,1] * U[1,1],     # y-nullcline
+        U[0,1] * U[1,1]      # y-nullcline
+    ]
+    
+    # Create all possible combinations
+    specific_points = [np.array([x, y]) for x, y in product(x_coords, y_coords)]
     zeros = []
-    print(f"\nEquilibria for d = {d}:")
-    print("-" * 50)
     
-    for x0 in initial_conditions:
+    # Step 1: Try newton's method on specific points
+    for x0 in specific_points:
         x, converged, _ = newton_method(system, x0, df=jacobian)
-        if converged:
-            is_new = True
-            for z in zeros:
-                if np.allclose(z, x, rtol=1e-8):
-                    is_new = False
-                    break
-            if is_new:
-                zeros.append(x)
-                # Get stability
-                J = jacobian(x)
-                eigenvals = np.linalg.eigvals(J)
-                stable = all(np.real(eigenvals) < 0)
-                
-                # Print stability information
-                print(f"\nEquilibrium point: ({x[0]:.6f}, {x[1]:.6f})")
-                print(f"Eigenvalues: {eigenvals[0]:.6f}, {eigenvals[1]:.6f}")
-                print(f"Stability: {'Stable' if stable else 'Unstable'}")
-                
-                # Plot points
-                if stable:
-                    plt.plot(x[0], x[1], 'ko', markersize=10)
-                else:
-                    plt.plot(x[0], x[1], 'ko', fillstyle='none', markersize=10)
+        if converged and is_new_point(x, zeros):
+            zeros.append(x)
+    
+    # Step 2: Try grid around specific points
+    if len(zeros) < 3:
+        for center in specific_points:
+            grid_size = 5
+            perturbations = np.linspace(-0.5, 0.5, grid_size)
+            for dx in perturbations:
+                for dy in perturbations:
+                    x0 = center + np.array([dx, dy])
+                    x, converged, _ = newton_method(system, x0, df=jacobian)
+                    if converged and is_new_point(x, zeros):
+                        zeros.append(x)
+    
+    # Step 3: Try forward integration
+    if len(zeros) < 3:
+        additional_points = [
+            np.array([0, U[1,1]]),
+            np.array([U[0,0], 0]),
+            np.array([U[0,0]/2, U[1,1]/2])
+        ]
+        
+        for x0 in additional_points:
+            x_integrated, converged = integrate_system(system, x0)
+            if converged:
+                x, converged, _ = newton_method(system, x_integrated, df=jacobian)
+                if converged and is_new_point(x, zeros):
+                    zeros.append(x)
+    
+    # Plot equilibrium points
+    for x in zeros:
+        # Get stability
+        J = jacobian(x)
+        eigenvals = np.linalg.eigvals(J)
+        stable = all(np.real(eigenvals) < 0)
+        
+        # Plot points
+        if stable:
+            plt.plot(x[0], x[1], 'ko', markersize=10)
+        else:
+            plt.plot(x[0], x[1], 'ko', fillstyle='none', markersize=10)
     
     # Add single legend with all elements
     plt.legend(handles=legend_elements, loc='best')
