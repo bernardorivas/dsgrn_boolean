@@ -9,9 +9,10 @@ from dsgrn_boolean.utils.hill_stable_analysis import analyze_stability_parallel
 from dsgrn_boolean.utils.sample_management import load_samples
 from dsgrn_boolean.utils.dsgrn_sample_to_matrix import extract_parameter_matrices
 from multiprocessing import cpu_count
+import argparse
 
 def main(par_index: int = 98):
-    # Setup network and parameter
+    # Setup network and parameter: 0, 49, 98, 147.
     net_spec = """x : x + y : E
                   y : (~x) y : E"""
     network = DSGRN.Network(net_spec)
@@ -25,11 +26,11 @@ def main(par_index: int = 98):
         if not morse_graph.adjacencies(v):
             n_equilibria += 1
 
-    print(f"Number of equilibria expected: {n_equilibria}")
+    print(f"Number of stable equilibria expected: {n_equilibria}")
     
     # Load and process samples
     samples = load_samples(par_index, filtered=True, filter_tol=0.1)
-    samples = samples[:10]
+    samples = samples[:100]
     
     # Optimize d_range: Use fewer points but strategically placed
     d_range = list(range(0,101))
@@ -40,6 +41,7 @@ def main(par_index: int = 98):
     
     # Run analysis
     n_processes = min(cpu_count(), len(processed_samples))
+    print(f"Running stability analysis with {n_processes} processes.")
     results = analyze_stability_parallel(
         network,
         parameter,
@@ -114,4 +116,9 @@ def main(par_index: int = 98):
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Run stability analysis for a given parameter index.')
+    parser.add_argument('-p', '--par_index', type=int, default=0,
+                      help='Parameter index to analyze (default: 0)')
+    args = parser.parse_args()
+    
+    main(args.par_index)

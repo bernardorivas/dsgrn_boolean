@@ -50,10 +50,10 @@ def plot_nullclines(L, U, T, d, n_points=1000):
         List of equilibrium points found
     """
     # Create Hill functions
-    h11 = HillFunction(L[0,0], U[0,0], T[0,0], d)
-    h21 = HillFunction(L[1,0], U[1,0], T[1,0], d)
-    h12 = HillFunction(U[0,1], L[0,1], T[0,1], d)
-    h22 = HillFunction(L[1,1], U[1,1], T[1,1], d)
+    h00 = HillFunction(L[0,0], U[0,0], T[0,0], d)
+    h10 = HillFunction(L[1,0], U[1,0], T[1,0], d)
+    h01 = HillFunction(U[0,1], L[0,1], T[0,1], d)
+    h11 = HillFunction(L[1,1], U[1,1], T[1,1], d)
     
     # Create grid
     x_max = 1.5*(U[0,0] + U[1,0])
@@ -63,10 +63,10 @@ def plot_nullclines(L, U, T, d, n_points=1000):
     X, Y = np.meshgrid(x, y)
     
     # First nullcline: x' = 0 => x = h11(x) + h21(y)
-    Z1 = h11(X) + h21(Y) - X
+    Z1 = h00(X) + h10(Y) - X
     
     # Second nullcline: y' = 0 => y = h12(x) * h22(y)
-    Z2 = h12(X) * h22(Y) - Y
+    Z2 = h01(X) * h11(Y) - Y
     
     # Plot
     plt.figure(figsize=(10, 10))
@@ -150,13 +150,7 @@ def plot_nullclines(L, U, T, d, n_points=1000):
     
     # Step 3: Try forward integration
     if len(zeros) < 3:
-        additional_points = [
-            np.array([0, U[1,1]]),
-            np.array([U[0,0], 0]),
-            np.array([U[0,0]/2, U[1,1]/2])
-        ]
-        
-        for x0 in additional_points:
+        for x0 in specific_points:
             x_integrated, converged = integrate_system(system, x0)
             if converged:
                 x, converged, _ = newton_method(system, x_integrated, df=jacobian)

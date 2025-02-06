@@ -11,26 +11,21 @@ from scipy.integrate import solve_ivp
 import time
 from multiprocessing import Pool
 from itertools import product
+
 def integrate_system(system, x0, t_span=(0, 20), rtol=1e-4):
     """Integrate ODE system to find stable equilibria"""
-    def event(t, x):
-        return np.linalg.norm(system(x)) - 1e-4  # Relaxed tolerance
-    event.terminal = True
-    event.direction = -1
-    
     sol = solve_ivp(
         lambda t, x: system(x),
         t_span,
         x0,
         method='RK45',
-        events=event,
         rtol=rtol,
         atol=1e-6,
         max_step=0.1
     )
     
-    final_deriv = np.linalg.norm(system(sol.y[:, -1]))
-    has_converged = final_deriv < 1e-3 or sol.status == 1
+    final_f = np.linalg.norm(system(sol.y[:, -1]))
+    has_converged = final_f < 1e-4
     
     return sol.y[:, -1], has_converged
 
@@ -57,7 +52,7 @@ def process_sample(args):
                 if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                     stable_equilibria.append(x_eq)
     
-    # If we haven't found all three stable states, proceed with other strategies
+    # If we haven't found all stable states, proceed with other strategies
     if len(stable_equilibria) < n_equilibria:
         # Step 1: Try specific points
         x_coords = [
@@ -88,11 +83,13 @@ def process_sample(args):
                 eigenvals = np.linalg.eigvals(J)
                 if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                     stable_equilibria.append(x_eq)
+                    if len(stable_equilibria) == n_equilibria:
+                        return stable_equilibria  # Early exit
     
         # Step 2: If still haven't found all, try grid around specific points
         if len(stable_equilibria) < n_equilibria:
             for center in specific_points:
-                grid_size = 5
+                grid_size = 4
                 perturbations = np.linspace(-0.5, 0.5, grid_size)
                 for dx in perturbations:
                     for dy in perturbations:

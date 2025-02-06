@@ -71,23 +71,23 @@ def hill(L, U, T, d):
             jacobian: returns df/dx
     """
     # Create Hill functions
-    h11 = HillFunction(L[0,0], U[0,0], T[0,0], d)
-    h21 = HillFunction(L[1,0], U[1,0], T[1,0], d)
-    h12 = HillFunction(U[0,1], L[0,1], T[0,1], d)
-    h22 = HillFunction(L[1,1], U[1,1], T[1,1], d)
+    h00 = HillFunction(L[0,0], U[0,0], T[0,0], d)
+    h10 = HillFunction(L[1,0], U[1,0], T[1,0], d)
+    h01 = HillFunction(U[0,1], L[0,1], T[0,1], d)
+    h11 = HillFunction(L[1,1], U[1,1], T[1,1], d)
     
     def system(x):
         """Compute right-hand side of the ODE system."""
         return np.array([
-            -x[0] + h11(x[0]) + h21(x[1]),
-            -x[1] + h12(x[0]) * h22(x[1])
+            -x[0] + h00(x[0]) + h10(x[1]),
+            -x[1] + h01(x[0]) * h11(x[1])
         ])
     
     def jacobian(x):
         """Compute the Jacobian matrix."""
-        return np.array([
-            [-1 + h11.derivative(x[0]), h21.derivative(x[1])],
-            [h12.derivative(x[0]) * h22(x[1]), -1 + h12(x[0]) * h22.derivative(x[1])]
+        return -np.eye(2) + np.array([
+            [h00.derivative(x[0]),     h10.derivative(x[1])],
+            [h01.derivative(x[0])*h11(x[1]),   h01(x[0])*h11.derivative(x[1])]
         ])
     
     return system, jacobian

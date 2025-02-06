@@ -19,10 +19,10 @@ def plot_nullclines_interactive(L, U, T, d_max):
         value=5.0,
         min=1.0,
         max=d_max,
-        step=1,
+        step=100,
         description='d:',
         continuous_update=False  # Only update when slider is released
     ))
     def update(d):
-        zeros = plot_nullclines(L, U, T, d)  # Uses the same plot_nullclines function
+        zeros = plot_nullclines(L, U, T, d, n_points=500)  # Uses the same plot_nullclines function
         return zeros
