@@ -11,7 +11,10 @@ from dsgrn_boolean.utils.dsgrn_sample_to_matrix import extract_parameter_matrice
 from multiprocessing import cpu_count
 import argparse
 
-def main(par_index: int = 98):
+def main(par_index: int = 98, n_samples: int = 100, d_min: int = 0, d_max: int = 100, d_step: int = 1):
+    # Set default d_range
+    d_range = list(range(d_min, d_max + 1, d_step))  # Convert to list since some functions might expect a list
+    
     # Setup network and parameter: 0, 49, 98, 147.
     net_spec = """x : x + y : E
                   y : (~x) y : E"""
@@ -30,10 +33,8 @@ def main(par_index: int = 98):
     
     # Load and process samples
     samples = load_samples(par_index, filtered=True, filter_tol=0.1)
-    samples = samples[:100]
+    samples = samples[:n_samples]
     
-    # Optimize d_range: Use fewer points but strategically placed
-    d_range = list(range(0,101))
     
     # Pre-allocate processed_samples list
     processed_samples = [(extract_parameter_matrices(sample, network)) 
@@ -117,8 +118,16 @@ def main(par_index: int = 98):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run stability analysis for a given parameter index.')
-    parser.add_argument('-p', '--par_index', type=int, default=0,
-                      help='Parameter index to analyze (default: 0)')
+    parser.add_argument('-p', '--par_index', type=int, default=98,
+                      help='Parameter index to analyze (default: 98)')
+    parser.add_argument('-n', '--n_samples', type=int, default=100,
+                      help='Number of samples to analyze (default: 100)')
+    parser.add_argument('--d_min', type=int, default=0,
+                      help='Minimum Hill coefficient (default: 0)')
+    parser.add_argument('--d_max', type=int, default=100,
+                      help='Maximum Hill coefficient (default: 100)')
+    parser.add_argument('--d_step', type=int, default=1,
+                      help='Step size for Hill coefficient (default: 1)')
     args = parser.parse_args()
     
-    main(args.par_index)
+    main(args.par_index, args.n_samples, args.d_min, args.d_max, args.d_step)
