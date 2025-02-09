@@ -1,0 +1,438 @@
+{
+  "par_index": 98,
+  "timestamp": "20250208-144022",
+  "network_spec": "x : x + y : E\n                  y : (~x) y : E",
+  "d_range": [
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "num_samples": 2,
+  "by_d": {
+    "11": {
+      "num_samples": 2,
+      "num_success": 0,
+      "num_failures": 2,
+      "success_rate": 0.0,
+      "failure_rate": 1.0,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              3.161132758415139,
+              1.9185503723385278
+            ],
+            [
+              0.21952044398723677,
+              0.04887763047435956
+            ]
+          ],
+          "success": false
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.6105437697131975,
+              3.8117717282730483
+            ],
+            [
+              0.35022302046982123,
+              0.03664455468859218
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "12": {
+      "num_samples": 2,
+      "num_success": 0,
+      "num_failures": 2,
+      "success_rate": 0.0,
+      "failure_rate": 1.0,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              3.1934952136855146,
+              1.739150048707286
+            ],
+            [
+              0.21952044398573684,
+              0.04887757547320049
+            ]
+          ],
+          "success": false
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.6395541513674243,
+              3.8198129071717934
+            ],
+            [
+              0.350223018313485,
+              0.03664455470940205
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "13": {
+      "num_samples": 2,
+      "num_success": 0,
+      "num_failures": 2,
+      "success_rate": 0.0,
+      "failure_rate": 1.0,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              3.217270262832405,
+              1.5845763741535372
+            ],
+            [
+              0.21952044398561232,
+              0.048877564826549015
+            ]
+          ],
+          "success": false
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.6644995292096867,
+              3.826545028956611
+            ],
+            [
+              0.3502230179460519,
+              0.03664455471245572
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "14": {
+      "num_samples": 2,
+      "num_success": 1,
+      "num_failures": 1,
+      "success_rate": 0.5,
+      "failure_rate": 0.5,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 3,
+          "stable_states": [
+            [
+              3.234406730826305,
+              1.452487414234113
+            ],
+            [
+              0.21952044398560197,
+              0.04887756276563857
+            ],
+            [
+              2.2536153181940737,
+              4.742365139109359
+            ]
+          ],
+          "success": true
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.685620264401043,
+              3.83231847291751
+            ],
+            [
+              0.3502230178834424,
+              0.03664455471290382
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "15": {
+      "num_samples": 2,
+      "num_success": 1,
+      "num_failures": 1,
+      "success_rate": 0.5,
+      "failure_rate": 0.5,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 3,
+          "stable_states": [
+            [
+              3.246007388363675,
+              1.3417172939761577
+            ],
+            [
+              0.2195204439856011,
+              0.048877562366699816
+            ],
+            [
+              2.216170780551762,
+              4.773977863612517
+            ]
+          ],
+          "success": true
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.7031855449438695,
+              3.8373335546721696
+            ],
+            [
+              0.35022301787277393,
+              0.03664455471296958
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "16": {
+      "num_samples": 2,
+      "num_success": 1,
+      "num_failures": 1,
+      "success_rate": 0.5,
+      "failure_rate": 0.5,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 3,
+          "stable_states": [
+            [
+              3.252482434719359,
+              1.2525661394294405
+            ],
+            [
+              0.21952044398560103,
+              0.048877562289475596
+            ],
+            [
+              2.1936706097416097,
+              4.790624849174064
+            ]
+          ],
+          "success": true
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.7175048302861788,
+              3.8416983507922327
+            ],
+            [
+              0.35022301787095605,
+              0.03664455471297923
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "17": {
+      "num_samples": 2,
+      "num_success": 1,
+      "num_failures": 1,
+      "success_rate": 0.5,
+      "failure_rate": 0.5,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 3,
+          "stable_states": [
+            [
+              3.2542094596042452,
+              1.1847374364367522
+            ],
+            [
+              0.21952044398560103,
+              0.04887756227452698
+            ],
+            [
+              2.1784961250131447,
+              4.800444674488706
+            ]
+          ],
+          "success": true
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.7289329137125067,
+              3.84546887649137
+            ],
+            [
+              0.3502230178706463,
+              0.03664455471298064
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "18": {
+      "num_samples": 2,
+      "num_success": 1,
+      "num_failures": 1,
+      "success_rate": 0.5,
+      "failure_rate": 0.5,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 3,
+          "stable_states": [
+            [
+              3.2521833995208573,
+              1.1350462842364333
+            ],
+            [
+              0.21952044398560103,
+              0.04887756227163331
+            ],
+            [
+              2.167698931003588,
+              4.806552594930724
+            ]
+          ],
+          "success": true
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.7378628838759873,
+              3.8486790498723416
+            ],
+            [
+              0.3502230178705935,
+              0.03664455471298085
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "19": {
+      "num_samples": 2,
+      "num_success": 1,
+      "num_failures": 1,
+      "success_rate": 0.5,
+      "failure_rate": 0.5,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 3,
+          "stable_states": [
+            [
+              3.2477271946845283,
+              1.098648354439492
+            ],
+            [
+              0.21952044398560103,
+              0.04887756227107318
+            ],
+            [
+              2.1597668490481468,
+              4.810473822877504
+            ]
+          ],
+          "success": true
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.7447055852955853,
+              3.8513614678469885
+            ],
+            [
+              0.3502230178705845,
+              0.03664455471298088
+            ]
+          ],
+          "success": false
+        }
+      ]
+    },
+    "20": {
+      "num_samples": 2,
+      "num_success": 1,
+      "num_failures": 1,
+      "success_rate": 0.5,
+      "failure_rate": 0.5,
+      "sample_results": [
+        {
+          "sample_index": 0,
+          "num_stable_states": 3,
+          "stable_states": [
+            [
+              3.2419254132086857,
+              1.0713401621773473
+            ],
+            [
+              0.21952044398560103,
+              0.04887756227096475
+            ],
+            [
+              2.153812986601371,
+              4.813045178687613
+            ]
+          ],
+          "success": true
+        },
+        {
+          "sample_index": 1,
+          "num_stable_states": 2,
+          "stable_states": [
+            [
+              1.7498613347295273,
+              3.853558252320707
+            ],
+            [
+              0.35022301787058296,
+              0.036644554712980885
+            ]
+          ],
+          "success": false
+        }
+      ]
+    }
+  }
+}
