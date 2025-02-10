@@ -19,7 +19,7 @@ def main(par_index: int, show_plot: bool = False):
         show_plot: Whether to show the plot (default: False)
     """
     # Fixed parameters for testing
-    n_samples = 100
+    n_samples = 200
     d_min = 1
     d_max = 100
     d_step = 1
@@ -90,7 +90,7 @@ def main(par_index: int, show_plot: bool = False):
                     "sample_index": i,
                     "num_stable_states": len(stable_states),
                     "stable_states": [state.tolist() for state in stable_states],
-                    "success": len(stable_states) > 0
+                    "success": len(stable_states) == n_equilibria
                 }
                 for i, stable_states in enumerate(sample_list)
             ]
@@ -131,6 +131,15 @@ def plot_stability_results(results, d_range, par_index):
     ax.set_ylabel('Coherency rate (%)')
     ax.set_title(f'Coherency rate by Hill coefficient at parameter node {par_index}')
     ax.grid(True, alpha=0.3)
+    
+    # Save the plot
+    figures_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'figures')
+    os.makedirs(figures_dir, exist_ok=True)
+    
+    filename = f"coherency_rate_parameter_{par_index}.png"
+    filepath = os.path.join(figures_dir, filename)
+    fig.savefig(filepath, bbox_inches='tight', dpi=300)
+    print(f"Plot saved to: {filepath}")
     
     return fig
 
