@@ -10,7 +10,7 @@ from dsgrn_boolean.utils.hill_stable_analysis import find_stable_equilibria
 from dsgrn_boolean.utils.sample_management import load_samples
 
 # Constants
-DEFAULT_PARAMETER_INDEX = 98
+DEFAULT_PARAMETER_INDEX = 0
 DEFAULT_NUM_SAMPLES = 100
 DEFAULT_D_MIN = 1
 DEFAULT_D_MAX = 100
@@ -85,8 +85,7 @@ def main(par_index: int = DEFAULT_PARAMETER_INDEX) -> None:
     num_samples = DEFAULT_NUM_SAMPLES
     d_range = list(range(DEFAULT_D_MIN, DEFAULT_D_MAX + 1, DEFAULT_D_STEP))
 
-    # Load and prepare data
-        # Load samples
+    # Load samples
     samples = load_samples(par_index, filtered=True, filter_tol=0.1)[:num_samples]
 
     # Setup network and parameter using DSGRN
@@ -94,13 +93,13 @@ def main(par_index: int = DEFAULT_PARAMETER_INDEX) -> None:
     parameter_graph = DSGRN.ParameterGraph(network)
     parameter = parameter_graph.parameter(par_index)
 
-    # Analyze stable states
+    # Count stable states
     n_stable = count_stable_states(parameter)
 
-    # Run stability analysis
+    # Run newton's method for each parameter sample and hill coefficient
     results = find_stable_equilibria_in_parallel(network, samples, n_stable, d_range)
 
-    # Create and save detailed results
+    # Save the results for a posteriori analysis
     save_results(par_index, NETWORK_SPEC, d_range, samples, results, n_stable)
 
 if __name__ == "__main__":

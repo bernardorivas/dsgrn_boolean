@@ -9,7 +9,7 @@ from dsgrn_boolean.models.hill import hill
 from dsgrn_boolean.utils.newton import newton_method
 from scipy.integrate import solve_ivp
 
-def plot_phase_portrait(L, U, T, d, n_points=20):
+def plot_phase_portrait(L, U, T, d, n_points=10):
     """Plot phase portrait with nullclines and trajectories."""
     system, jacobian = hill(L, U, T, d)
     

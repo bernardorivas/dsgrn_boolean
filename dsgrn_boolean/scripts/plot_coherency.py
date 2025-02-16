@@ -29,7 +29,7 @@ def plot_coherency(json_path: str) -> None:
     # Create plot
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.bar(d_values, success_rates, color='skyblue')
-    ax.axis([0, 100])
+    ax.axis([min(d_values)-1, max(d_values)+1, 0, 100])
     ax.set_xlabel('Hill Coefficient (d)')
     ax.set_ylabel('Coherency rate (%)')
     ax.set_title(f'Coherency rate by Hill coefficient at parameter node {par_index}')
@@ -60,4 +60,4 @@ if __name__ == "__main__":
     else:
         for json_file in json_files:
             filepath = os.path.join(data_dir, json_file)
-            plot_stability_from_json(filepath)
+            plot_coherency(filepath)
