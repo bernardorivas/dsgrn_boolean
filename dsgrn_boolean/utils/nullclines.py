@@ -1,33 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from .newton import newton_method
-from dsgrn_boolean.models.hill import HillFunction
-from dsgrn_boolean.models.hill import hill
-from scipy.integrate import solve_ivp
+from dsgrn_boolean.models.hill import *
 from itertools import product
-
-def integrate_system(system, x0, t_span=(0, 20), rtol=1e-4):
-    """Integrate ODE system to find stable equilibria"""
-    def event(t, x):
-        return np.linalg.norm(system(x)) - 1e-4  # Relaxed tolerance
-    event.terminal = True
-    event.direction = -1
-    
-    sol = solve_ivp(
-        lambda t, x: system(x),
-        t_span,
-        x0,
-        method='RK45',
-        events=event,
-        rtol=rtol,
-        atol=1e-6,
-        max_step=0.1
-    )
-    
-    final_deriv = np.linalg.norm(system(sol.y[:, -1]))
-    has_converged = final_deriv < 1e-3 or sol.status == 1
-    
-    return sol.y[:, -1], has_converged
 
 def is_new_point(point, existing_points, rtol=1e-8):
     """Check if point is significantly different from existing points"""
@@ -36,8 +11,8 @@ def is_new_point(point, existing_points, rtol=1e-8):
 def plot_nullclines(L, U, T, d, n_points=1000):
     """
     Plot nullclines of the system:
-    x' = -x + h11(x) + h21(y)
-    y' = -y + h12(x) * h22(y)
+    x' = -x + h00(x) + h10(y)
+    y' = -y + h01(x) * h11(y)
     
     Args:
         L: Lower bounds matrix
@@ -47,8 +22,11 @@ def plot_nullclines(L, U, T, d, n_points=1000):
         n_points: Number of points for grid discretization (default=1000)
         
     Returns:
-        List of equilibrium points found
+        fig : figure of the nullclines
     """
+    # Create figure and axes
+    fig, ax = plt.subplots(figsize=(10, 10))
+    
     # Create Hill functions
     h00 = HillFunction(L[0,0], U[0,0], T[0,0], d)
     h10 = HillFunction(L[1,0], U[1,0], T[1,0], d)
@@ -62,47 +40,33 @@ def plot_nullclines(L, U, T, d, n_points=1000):
     y = np.linspace(0, y_max, n_points)
     X, Y = np.meshgrid(x, y)
     
-    # First nullcline: x' = 0 => x = h11(x) + h21(y)
+    # First nullcline: x' = 0 
     Z1 = h00(X) + h10(Y) - X
     
-    # Second nullcline: y' = 0 => y = h12(x) * h22(y)
+    # Second nullcline: y' = 0
     Z2 = h01(X) * h11(Y) - Y
     
     # Plot
-    plt.figure(figsize=(10, 10))
-    
-    # Create contours and get the collections for legend
-    x_nullcline = plt.contour(X, Y, Z1, levels=[0], colors='blue')
-    y_nullcline = plt.contour(X, Y, Z2, levels=[0], colors='red')
-    
-    # Create proxy artists for the legend
-    from matplotlib.lines import Line2D
-    legend_elements = [
-        Line2D([0], [0], color='blue', label="x-nullcline"),
-        Line2D([0], [0], color='red', label="y-nullcline"),
-        Line2D([0], [0], color='black', marker='o', label='Stable equilibrium', 
-               linestyle='None', markersize=10),
-        Line2D([0], [0], color='black', marker='o', label='Unstable equilibrium',
-               linestyle='None', markersize=10, fillstyle='none')
-    ]
+    ax.contour(X, Y, Z1, levels=[0], colors='blue')
+    ax.contour(X, Y, Z2, levels=[0], colors='red')
     
     # Add threshold lines without labels
-    plt.axvline(x=T[0,0], color='lightgray', linestyle='--', alpha=0.5)
-    plt.axvline(x=T[0,1], color='lightgray', linestyle='--', alpha=0.5)
-    plt.axhline(y=T[1,0], color='lightgray', linestyle='--', alpha=0.5)
-    plt.axhline(y=T[1,1], color='lightgray', linestyle='--', alpha=0.5)
+    ax.axvline(x=T[0,0], color='lightgray', linestyle='--', alpha=0.5)
+    ax.axvline(x=T[0,1], color='lightgray', linestyle='--', alpha=0.5)
+    ax.axhline(y=T[1,0], color='lightgray', linestyle='--', alpha=0.5)
+    ax.axhline(y=T[1,1], color='lightgray', linestyle='--', alpha=0.5)
     
     # Set axis limits explicitly
-    plt.xlim(0, x_max)
-    plt.ylim(0, y_max)
+    ax.set_xlim(0, x_max)
+    ax.set_ylim(0, y_max)
     
     # Add labels and legend
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title(f'Nullclines (d={d})')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_title(f'Nullclines (d={d})')
     
     # Remove grid, keep only axes
-    plt.grid(False)
+    ax.grid(False)
     
     # Get system and jacobian
     system, jacobian = hill(L, U, T, d)
@@ -139,23 +103,14 @@ def plot_nullclines(L, U, T, d, n_points=1000):
     # Step 2: Try grid around specific points
     if len(zeros) < 3:
         for center in specific_points:
-            grid_size = 5
-            perturbations = np.linspace(-0.5, 0.5, grid_size)
+            grid_size = 2
+            perturbations = np.linspace(-1, 1, grid_size)
             for dx in perturbations:
                 for dy in perturbations:
                     x0 = center + np.array([dx, dy])
                     x, converged, _ = newton_method(system, x0, df=jacobian)
                     if converged and is_new_point(x, zeros):
                         zeros.append(x)
-    
-    # Step 3: Try forward integration
-    if len(zeros) < 3:
-        for x0 in specific_points:
-            x_integrated, converged = integrate_system(system, x0)
-            if converged:
-                x, converged, _ = newton_method(system, x_integrated, df=jacobian)
-                if converged and is_new_point(x, zeros):
-                    zeros.append(x)
     
     # Plot equilibrium points
     for x in zeros:
@@ -166,12 +121,23 @@ def plot_nullclines(L, U, T, d, n_points=1000):
         
         # Plot points
         if stable:
-            plt.plot(x[0], x[1], 'ko', markersize=10)
+            ax.plot(x[0], x[1], 'ko', markersize=10)
         else:
-            plt.plot(x[0], x[1], 'ko', fillstyle='none', markersize=10)
+            ax.plot(x[0], x[1], 'ko', fillstyle='none', markersize=10)
+    
+    # Create proxy artists for the legend
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], color='blue', label="x-nullcline"),
+        Line2D([0], [0], color='red', label="y-nullcline"),
+        Line2D([0], [0], color='black', marker='o', label='Stable equilibrium', 
+               linestyle='None', markersize=10),
+        Line2D([0], [0], color='black', marker='o', label='Unstable equilibrium',
+               linestyle='None', markersize=10, fillstyle='none')
+    ]
     
     # Add single legend with all elements
-    plt.legend(handles=legend_elements, loc='best')
-    plt.show()
+    ax.legend(handles=legend_elements, loc='best')
     
-    return zeros
+    # Return both figure and equilibrium points
+    return fig

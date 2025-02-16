@@ -23,68 +23,68 @@ def plot_phase_portrait(L, U, T, d, n_points=20):
     gs = GridSpec(1, 1)
     ax = fig.add_subplot(gs[0])
     
-    # Plot trajectories from different initial conditions
-    x_starts = np.linspace(0.1, x_max, n_points)
-    y_starts = np.linspace(0.1, y_max, n_points)
-    t_span = (0, 50)  # Time span for integration
+    # Optimize trajectory calculations
+    x_starts = np.linspace(0.1, x_max, n_points)[::2]  # Use every other point
+    y_starts = np.linspace(0.1, y_max, n_points)[::2]
+    t_span = (0, 30)  # Reduced time span
     
-    # Create a grid of initial conditions
-    for x0 in x_starts[::2]:  # Use every other point to avoid overcrowding
-        for y0 in y_starts[::2]:
-            sol = solve_ivp(
-                lambda t, x: system(x),
-                t_span,
-                [x0, y0],
-                method='RK45',
-                rtol=1e-6,
-                max_step=0.1,
-                dense_output=True
-            )
-            
-            # Get dense output for smooth plotting
-            t_dense = np.linspace(0, sol.t[-1], 200)
-            y_dense = sol.sol(t_dense)
-            
-            # Plot trajectory with alpha gradient
-            points = y_dense.T
-            segments = np.array([[points[i], points[i+1]] for i in range(len(points)-1)])
-            alpha_gradient = np.linspace(0.1, 0.8, len(segments))
-            
-            for segment, alpha in zip(segments, alpha_gradient):
-                ax.plot(segment[:,0], segment[:,1], 'gray', alpha=alpha, linewidth=0.8)
-            
-            # Plot start point
-            ax.plot(x0, y0, 'k.', markersize=2, alpha=0.3)
+    # Vectorize initial conditions
+    X0, Y0 = np.meshgrid(x_starts, y_starts)
+    initial_conditions = np.column_stack((X0.ravel(), Y0.ravel()))
     
-    # Plot nullclines
-    xx = np.linspace(0, x_max, 200)
-    yy = np.linspace(0, y_max, 200)
+    # Plot trajectories more efficiently
+    for ic in initial_conditions:
+        sol = solve_ivp(
+            lambda t, x: system(x),
+            t_span,
+            ic,
+            method='RK45',
+            rtol=1e-4,  # Reduced tolerance
+            max_step=0.5,  # Increased max step
+            dense_output=True
+        )
+        
+        # Fewer points for dense output
+        t_dense = np.linspace(0, sol.t[-1], 100)  # Reduced from 200
+        y_dense = sol.sol(t_dense)
+        
+        # Plot trajectory with single call using alpha gradient
+        points = y_dense.T
+        ax.plot(points[:,0], points[:,1], 'gray', alpha=0.3, linewidth=0.8)
+        ax.plot(ic[0], ic[1], 'k.', markersize=2, alpha=0.3)
+    
+    # Optimize nullcline calculations
+    n_grid = 100  # Reduced from 200
+    xx = np.linspace(0, x_max, n_grid)
+    yy = np.linspace(0, y_max, n_grid)
     XX, YY = np.meshgrid(xx, yy)
     
-    UV = np.zeros((200, 200, 2))
-    for i in range(200):
-        for j in range(200):
-            UV[i,j,:] = system([XX[i,j], YY[i,j]])
+    # Vectorize system evaluation
+    points = np.stack((XX, YY), axis=-1)
+    UV = np.apply_along_axis(system, 2, points)
     
-    # x-nullcline where dx/dt = 0
+    # Plot nullclines
     ax.contour(XX, YY, UV[:,:,0], levels=[0], colors='blue', alpha=0.7)
-    # y-nullcline where dy/dt = 0
     ax.contour(XX, YY, UV[:,:,1], levels=[0], colors='red', alpha=0.7)
     
-    # Find and plot equilibria
+    # Optimize equilibria search
+    n_search = 8  # Reduced from 10
+    search_points = np.linspace(0, x_max, n_search)
+    X0, Y0 = np.meshgrid(search_points, search_points)
+    initial_guesses = np.column_stack((X0.ravel(), Y0.ravel()))
+    
     equilibria = []
-    for x0 in np.linspace(0, x_max, 10):
-        for y0 in np.linspace(0, y_max, 10):
-            eq, converged, _ = newton_method(system, np.array([x0, y0]), df=jacobian)
-            if converged and all(eq >= 0):
-                if not any(np.allclose(eq, e) for e in equilibria):
-                    equilibria.append(eq)
-                    J = jacobian(eq)
-                    eigenvals = np.linalg.eigvals(J)
-                    if all(np.real(eigenvals) < 0):
-                        ax.plot(eq[0], eq[1], 'go', markersize=10, label='Stable')
-                    else:
-                        ax.plot(eq[0], eq[1], 'ro', markersize=10, label='Unstable')
+    for guess in initial_guesses:
+        eq, converged, _ = newton_method(system, guess, df=jacobian)
+        if converged and all(eq >= 0):
+            if not any(np.allclose(eq, e) for e in equilibria):
+                equilibria.append(eq)
+                J = jacobian(eq)
+                eigenvals = np.linalg.eigvals(J)
+                if all(np.real(eigenvals) < 0):
+                    ax.plot(eq[0], eq[1], 'go', markersize=10, label='Stable')
+                else:
+                    ax.plot(eq[0], eq[1], 'ro', markersize=10, label='Unstable')
     
     ax.set_xlabel('x')
     ax.set_ylabel('y')
@@ -93,7 +93,6 @@ def plot_phase_portrait(L, U, T, d, n_points=20):
     ax.set_xlim(0, x_max)
     ax.set_ylim(0, y_max)
     
-    # Remove duplicate labels
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys())
@@ -123,7 +122,7 @@ def interactive_phase_portrait(par_index=98, sample_index=0):
     def update(d, n_points):
         plt.close('all')  # Clear previous plots
         fig = plot_phase_portrait(L, U, T, d, n_points)
-        plt.show()
+        return fig
 
 if __name__ == "__main__":
     import argparse

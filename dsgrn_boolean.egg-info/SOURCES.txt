@@ -15,4 +15,15 @@ dsgrn_boolean/models/tanh.py
 dsgrn_boolean/tests/__init__.py
 dsgrn_boolean/tests/test_newton.py
 dsgrn_boolean/utils/__init__.py
+dsgrn_boolean/utils/cuda_helpers.py
+dsgrn_boolean/utils/dsgrn_sample_to_matrix.py
+dsgrn_boolean/utils/find_stable_states.py
+dsgrn_boolean/utils/hill_analysis.py
+dsgrn_boolean/utils/hill_stable_analysis.py
+dsgrn_boolean/utils/interactive.py
 dsgrn_boolean/utils/newton.py
+dsgrn_boolean/utils/nullclines.py
+dsgrn_boolean/utils/plot_stability.py
+dsgrn_boolean/utils/sample_management.py
+dsgrn_boolean/utils/simulation_debug.py
+dsgrn_boolean/utils/stability_analysis.py
