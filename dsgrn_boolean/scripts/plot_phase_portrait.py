@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import numpy as np
 from ipywidgets import interact, FloatSlider, IntSlider
-import ipywidgets as widgets
 from dsgrn_boolean.utils.sample_management import load_samples
 from dsgrn_boolean.utils.dsgrn_sample_to_matrix import extract_parameter_matrices
 from dsgrn_boolean.models.hill import hill
