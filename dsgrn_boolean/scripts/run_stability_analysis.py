@@ -19,7 +19,7 @@ def main(par_index: int, show_plot: bool = False):
         show_plot: Whether to show the plot (default: False)
     """
     # Fixed parameters for testing
-    n_samples = 200
+    n_samples = 100
     d_min = 1
     d_max = 100
     d_step = 1
