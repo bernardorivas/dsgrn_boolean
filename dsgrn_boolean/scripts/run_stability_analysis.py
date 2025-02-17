@@ -10,10 +10,10 @@ from dsgrn_boolean.utils.hill_stable_analysis import find_stable_equilibria
 from dsgrn_boolean.utils.sample_management import load_samples
 
 # Constants
-DEFAULT_PARAMETER_INDEX = 0
-DEFAULT_NUM_SAMPLES = 100
-DEFAULT_D_MIN = 1
-DEFAULT_D_MAX = 100
+DEFAULT_PARAMETER_INDEX = 98 # par_list = [0, 49, 98, 147]
+DEFAULT_NUM_SAMPLES = 100 # 100
+DEFAULT_D_MIN = 1 
+DEFAULT_D_MAX = 10 # 100
 DEFAULT_D_STEP = 1
 NETWORK_SPEC = """x : x + y : E
                   y : (~x) y : E"""
