@@ -49,7 +49,7 @@ def process_sample(args):
     
     return stable_equilibria
 
-def find_stable_equilibria(network, samples, n_equilibria, d_range, n_processes=None):
+def find_stable_equilibria_in_parallel(network, samples, n_equilibria, d_range, n_processes=None):
     """Analyze stability of samples in parallel."""
     # Process samples
     processed_samples = [extract_parameter_matrices(sample, network) 
@@ -60,7 +60,6 @@ def find_stable_equilibria(network, samples, n_equilibria, d_range, n_processes=
     
     # Process samples in parallel
     print("\nStarting computation...")
-    start_time = time.time()
     
     with Pool(processes=n_processes) as pool:
         results = list(tqdm(
@@ -125,13 +124,13 @@ def find_additional_equilibria(system, jacobian, L, U, T, n_equilibria):
             if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                 stable_equilibria.append(x_eq)
                 if len(stable_equilibria) == n_equilibria:
-                    return stable_equilibria  # Early exit
+                    return stable_equilibria
     
     # Step 2: If still haven't found all, try grid around specific points
     if len(stable_equilibria) < n_equilibria:
         for center in specific_points:
             grid_size = 4
-            perturbations = np.linspace(-0.5, 0.5, grid_size)
+            perturbations = np.linspace(-1, 1, grid_size)
             for dx in perturbations:
                 for dy in perturbations:
                     x0 = center + np.array([dx, dy])
@@ -141,17 +140,20 @@ def find_additional_equilibria(system, jacobian, L, U, T, n_equilibria):
                         eigenvals = np.linalg.eigvals(J)
                         if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
                             stable_equilibria.append(x_eq)
+                            if len(stable_equilibria) == n_equilibria:
+                                return stable_equilibria
     
     # Step 3: If still haven't found all, try forward integration
     if len(stable_equilibria) < n_equilibria:
         for x0 in specific_points:
-            x_integrated, converged = integrate_system(system, x0)
+            x_integrated, _ = integrate_system(system, x0)
+            x_eq, converged, _ = newton_method(system, x_integrated, df=jacobian)
             if converged:
-                x_eq, converged, _ = newton_method(system, x_integrated, df=jacobian)
-                if converged:
-                    J = jacobian(x_eq)
-                    eigenvals = np.linalg.eigvals(J)
-                    if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
-                        stable_equilibria.append(x_eq)
+                J = jacobian(x_eq)
+                eigenvals = np.linalg.eigvals(J)
+                if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
+                    stable_equilibria.append(x_eq)
+                    if len(stable_equilibria) == n_equilibria:
+                        return stable_equilibria
     
     return stable_equilibria

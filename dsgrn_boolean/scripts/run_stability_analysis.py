@@ -6,18 +6,18 @@ import json
 import argparse
 from multiprocessing import cpu_count
 
-from dsgrn_boolean.utils.hill_stable_analysis import find_stable_equilibria
+from dsgrn_boolean.utils.hill_stable_analysis import find_stable_equilibria_in_parallel
 from dsgrn_boolean.utils.sample_management import load_samples
 
 # Constants
 DEFAULT_PARAMETER_INDEX = 98 # par_list = [0, 49, 98, 147]
 DEFAULT_NUM_SAMPLES = 100 # 100
 DEFAULT_D_MIN = 1 
-DEFAULT_D_MAX = 10 # 100
+DEFAULT_D_MAX = 100 # 100
 DEFAULT_D_STEP = 1
 NETWORK_SPEC = """x : x + y : E
                   y : (~x) y : E"""
-STABILITY_DATA_DIR = "stability_data"
+RESULTS_DIR = "stability_data"
 
 def count_stable_states(parameter: DSGRN.Parameter) -> int:
     """Count the number of expected stable states using DSGRN_utils."""
@@ -25,22 +25,6 @@ def count_stable_states(parameter: DSGRN.Parameter) -> int:
     n_stable = sum(1 for v in morse_graph.vertices() if not morse_graph.adjacencies(v))
     print(f"Number of stable states expected: {n_stable}")
     return n_stable
-
-def find_stable_equilibria_in_parallel(network: DSGRN.Network, samples: list, n_stable: int, d_range: list) -> dict:
-    """Runs stability analysis in parallel."""
-    n_processes = min(cpu_count(), len(samples))
-    start_time = time.time()
-    results = find_stable_equilibria(
-        network,
-        samples,
-        n_stable,
-        d_range=d_range,
-        n_processes=n_processes
-    )
-    total_time = time.time() - start_time
-    print(f"\nTotal execution time: {total_time:.2f} seconds")
-    print(f"Average time per sample: {total_time/len(samples):.2f} seconds")
-    return results
 
 def save_results(par_index: int, network_spec: str, d_range: list, samples: list, results: dict, n_stable: int) -> None:
     """Creates detailed data dictionary and saves it to a JSON file."""
@@ -66,7 +50,7 @@ def save_results(par_index: int, network_spec: str, d_range: list, samples: list
         }
 
     root_dir = os.path.dirname(os.path.dirname(__file__))
-    stability_dir = os.path.join(root_dir, STABILITY_DATA_DIR)
+    stability_dir = os.path.join(root_dir, RESULTS_DIR)
     os.makedirs(stability_dir, exist_ok=True)
 
     filename = f"parindex_{detailed_data['par_index']}_detailed_stability_{detailed_data['timestamp']}.json"
@@ -97,7 +81,17 @@ def main(par_index: int = DEFAULT_PARAMETER_INDEX) -> None:
     n_stable = count_stable_states(parameter)
 
     # Run newton's method for each parameter sample and hill coefficient
-    results = find_stable_equilibria_in_parallel(network, samples, n_stable, d_range)
+    start_time = time.time()
+    results = find_stable_equilibria_in_parallel(
+        network,
+        samples,
+        n_stable,
+        d_range=d_range,
+        n_processes=min(cpu_count(), len(samples))
+    )
+    total_time = time.time() - start_time
+    print(f"\nTotal execution time: {total_time:.2f} seconds")
+    print(f"Average time per sample: {total_time/len(samples):.2f} seconds")
 
     # Save the results for a posteriori analysis
     save_results(par_index, NETWORK_SPEC, d_range, samples, results, n_stable)
