@@ -1,6 +1,6 @@
 import numpy as np
 
-def newton_method(f, x0, tol=1e-6, max_iter=100, df=None):
+def newton_method(f, x0, max_iter=100, df=None, abs_tol=1e-6, rel_tol=1e-12):
     """
     Implements Newton's method for a system of equations f(x) = 0, where f: R^n -> R^n.
 
@@ -13,6 +13,8 @@ def newton_method(f, x0, tol=1e-6, max_iter=100, df=None):
         df: (Optional) The Jacobian matrix of f, a function that takes a numpy array (x) 
             of shape (n,) and returns a numpy array of shape (n, n). 
             If not provided, finite differences will be used (see alternatives below).
+        abs_tol: The absolute tolerance for convergence.
+        rel_tol: The relative tolerance for convergence.
 
     Returns:
         A tuple (x, converged, iter_count):
@@ -43,11 +45,18 @@ def newton_method(f, x0, tol=1e-6, max_iter=100, df=None):
             print("Singular Jacobian encountered. Newton's method may fail to converge.")
             return x, False, iter_count
 
-        x += delta_x
+        x_new = x + delta_x
 
-        if np.linalg.norm(delta_x) < tol:
+        # Check convergence conditions
+        if np.linalg.norm(delta_x) < abs_tol or np.linalg.norm(delta_x) < rel_tol * np.linalg.norm(x_new):
             converged = True
+            x = x_new
             break
+
+        x = x_new
+
+    # if not converged:
+    #     raise RuntimeError("Newton's method did not converge after max_iter iterations.")
 
     return x, converged, iter_count
 

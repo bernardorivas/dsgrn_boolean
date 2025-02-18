@@ -89,7 +89,7 @@ def process_single_sample(args):
     for d in sorted(d_range, reverse=True):
         results[d] = find_equilibria((L, U, T, d, prev_states, n_equilibria))
         prev_states = results[d]
-    
+    # print(f"Sample processed: {results}")    
     return results
 
 def find_additional_equilibria(system, jacobian, L, U, T, n_equilibria):
@@ -131,8 +131,8 @@ def find_additional_equilibria(system, jacobian, L, U, T, n_equilibria):
     # Step 2: If still haven't found all, try grid around specific points
     if len(stable_equilibria) < n_equilibria:
         for center in specific_points:
-            grid_size = 4
-            perturbations = np.linspace(-1, 1, grid_size)
+            grid_size = 2
+            perturbations = np.linspace(-0.3, 0.3, grid_size)
             for dx in perturbations:
                 for dy in perturbations:
                     x0 = center + np.array([dx, dy])

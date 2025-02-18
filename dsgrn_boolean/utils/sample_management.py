@@ -73,16 +73,12 @@ def save_samples(samples: list, par_index: int, filter_tol: float = None) -> Non
             f.write(sample + '\n')
     print(f"Saved {len(samples)} samples to {filename}")
 
-def load_samples(par_index, network=None, parameter=None, filter_tol=None):
+def load_samples(par_index, filter_tol=None):
     """
     Load pre-computed parameter samples from file.
     
     Args:
         par_index: Parameter node index
-        network: DSGRN network object (only needed if regenerating)
-        parameter: DSGRN parameter node (only needed if regenerating)
-        force_regenerate: If True, regenerate samples even if file exists
-        filtered: Whether to load filtered samples
         filter_tol: Threshold tolerance for filtered samples (default: 0.1)
     
     Returns:
@@ -93,7 +89,7 @@ def load_samples(par_index, network=None, parameter=None, filter_tol=None):
     data_dir = os.path.join(root_dir, DATA_DIR)
     
     # Determine filename based on filtering options
-    if filtered:
+    if filter_tol is not None:
         tol_str = str(filter_tol).replace('.', '_')
         filename = os.path.join(
             data_dir, 
@@ -105,6 +101,8 @@ def load_samples(par_index, network=None, parameter=None, filter_tol=None):
     if os.path.exists(filename):
         with open(filename, 'r') as f:
             samples = [line.strip() for line in f]
+    else: 
+        print(f"File not found: {filename}")
     return samples
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ from dsgrn_boolean.utils.sample_management import load_samples
 
 # Constants
 DEFAULT_PARAMETER_INDEX = 0 # par_list = [0, 49, 98, 147]
-DEFAULT_NUM_SAMPLES = 5 # 100
+DEFAULT_NUM_SAMPLES = 1 # 100
 DEFAULT_D_MIN = 1 
 DEFAULT_D_MAX = 10 # 100
 DEFAULT_D_STEP = 1
@@ -70,7 +70,7 @@ def main(par_index: int = DEFAULT_PARAMETER_INDEX) -> None:
     d_range = list(range(DEFAULT_D_MIN, DEFAULT_D_MAX + 1, DEFAULT_D_STEP))
 
     # Load samples
-    samples = load_samples(par_index, filtered=True, filter_tol=0.1)[:num_samples]
+    samples = load_samples(par_index, filter_tol=0.1)[:num_samples]
 
     # Setup network and parameter using DSGRN
     network = DSGRN.Network(NETWORK_SPEC)
