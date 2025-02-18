@@ -35,6 +35,7 @@ def plot_coherency(json_path: str) -> None:
     ax.set_title(f'Coherency rate by Hill coefficient at parameter node {par_index}')
     ax.grid(True, alpha=0.3)
     
+    
     # Save the plot
     figures_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'figures')
     os.makedirs(figures_dir, exist_ok=True)

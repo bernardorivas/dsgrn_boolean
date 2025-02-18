@@ -24,7 +24,8 @@ def integrate_system(system, x0, t_span=(0, 20), rtol=1e-4):
     return sol.y[:, -1], np.linalg.norm(system(sol.y[:, -1])) < 1e-4
 
 def is_new_point(point, existing_points, rtol=1e-4):
-    """Check if a point is significantly different from existing points"""
+    if not existing_points:
+        return True
     return not any(np.allclose(point, p, rtol=rtol) for p in existing_points)
 
 def find_equilibria(args):
@@ -33,7 +34,7 @@ def find_equilibria(args):
     system, jacobian = hill(L, U, T, d)
     stable_equilibria = []
     
-    # Try previous states first if available
+    # Try previous states first
     if prev_states is not None and len(prev_states) > 0:
         for x0 in prev_states:
             x_eq, converged, _ = newton_method(system, x0, df=jacobian)
@@ -128,24 +129,39 @@ def find_additional_equilibria(system, jacobian, L, U, T, n_equilibria):
                 if len(stable_equilibria) == n_equilibria:
                     return stable_equilibria
     
-    # Step 2: If still haven't found all, try grid around specific points
+    # Step 2: If still haven't found all, try some random points in the square
     if len(stable_equilibria) < n_equilibria:
-        for center in specific_points:
-            grid_size = 2
-            perturbations = np.linspace(-0.3, 0.3, grid_size)
-            for dx in perturbations:
-                for dy in perturbations:
-                    x0 = center + np.array([dx, dy])
-                    x_eq, converged, _ = newton_method(system, x0, df=jacobian)
-                    if converged:
-                        J = jacobian(x_eq)
-                        eigenvals = np.linalg.eigvals(J)
-                        if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
-                            stable_equilibria.append(x_eq)
-                            if len(stable_equilibria) == n_equilibria:
-                                return stable_equilibria
-    
-    # Step 3: If still haven't found all, try forward integration
+        x_max = 1.1 * max(x_coords)
+        y_max = 1.1 * max(y_coords)
+        num_random_points = 100
+        random_points = [np.array([np.random.uniform(0, x_max), np.random.uniform(0, y_max)]) for _ in range(num_random_points)]
+        for x0 in random_points:
+            x_eq, converged, _ = newton_method(system, x0, df=jacobian)
+            if converged:
+                J = jacobian(x_eq)
+                eigenvals = np.linalg.eigvals(J)
+                if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
+                    stable_equilibria.append(x_eq)
+                    if len(stable_equilibria) == n_equilibria:
+                        return stable_equilibria
+
+    # Step 3: If still haven't found all, try a grid in the rectangle
+    # if len(stable_equilibria) < n_equilibria:
+    #     grid_size = 10
+    #     x_points = np.linspace(0, 1.1*max(x_coords), grid_size)[1:-1]
+    #     y_points = np.linspace(0, 1.1*max(y_coords), grid_size)[1:-1]
+    #     grid = [np.array([x, y]) for x, y in product(x_points, y_points)]
+    #     for x0 in grid:
+    #         x_eq, converged, _ = newton_method(system, x0, df=jacobian)
+    #         if converged:
+    #             J = jacobian(x_eq)
+    #             eigenvals = np.linalg.eigvals(J)
+    #             if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
+    #                 stable_equilibria.append(x_eq)
+    #                 if len(stable_equilibria) == n_equilibria:
+    #                     return stable_equilibria
+
+    # Step 4: If still haven't found all, try forward integration
     # if len(stable_equilibria) < n_equilibria:
     #     for x0 in specific_points:
     #         x_integrated, _ = integrate_system(system, x0)
