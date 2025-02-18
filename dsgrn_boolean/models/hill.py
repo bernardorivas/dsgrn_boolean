@@ -53,7 +53,7 @@ class HillFunction:
                                 (self.U - self.L) * ratio / (1 + ratio))
 
     def derivative(self, x: ArrayLike) -> NDArray:
-        """Evaluate h'(x) = (U-L)dx^(d-1)θ^d/(θ^d + x^d)²"""
+        """Evaluate h'(x)"""
         x = np.asarray(x)
         ratio = self._compute_ratio(x)
         
