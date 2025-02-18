@@ -23,11 +23,11 @@ def integrate_system(system, x0, t_span=(0, 20), rtol=1e-4):
     )
     return sol.y[:, -1], np.linalg.norm(system(sol.y[:, -1])) < 1e-4
 
-def is_new_point(point, existing_points, rtol=1e-8):
+def is_new_point(point, existing_points, rtol=1e-4):
     """Check if a point is significantly different from existing points"""
     return not any(np.allclose(point, p, rtol=rtol) for p in existing_points)
 
-def process_sample(args):
+def find_equilibria(args):
     """Find stable equilibria for a single parameter set at given Hill coefficient."""
     L, U, T, d, prev_states, n_equilibria = args
     system, jacobian = hill(L, U, T, d)
@@ -45,7 +45,10 @@ def process_sample(args):
     
     # If needed, try additional points
     if len(stable_equilibria) < n_equilibria:
-        stable_equilibria.extend(find_additional_equilibria(system, jacobian, L, U, T, n_equilibria))
+        new_equilibria = find_additional_equilibria(system, jacobian, L, U, T, n_equilibria)
+        for p in new_equilibria: 
+            if is_new_point(p, stable_equilibria):
+                stable_equilibria.append(p)
     
     return stable_equilibria
 
@@ -84,9 +87,8 @@ def process_single_sample(args):
     
     prev_states = None
     for d in sorted(d_range, reverse=True):
-        stable_eq = process_sample((L, U, T, d, prev_states, n_equilibria))
-        results[d] = stable_eq
-        prev_states = stable_eq
+        results[d] = find_equilibria((L, U, T, d, prev_states, n_equilibria))
+        prev_states = results[d]
     
     return results
 
@@ -144,16 +146,16 @@ def find_additional_equilibria(system, jacobian, L, U, T, n_equilibria):
                                 return stable_equilibria
     
     # Step 3: If still haven't found all, try forward integration
-    if len(stable_equilibria) < n_equilibria:
-        for x0 in specific_points:
-            x_integrated, _ = integrate_system(system, x0)
-            x_eq, converged, _ = newton_method(system, x_integrated, df=jacobian)
-            if converged:
-                J = jacobian(x_eq)
-                eigenvals = np.linalg.eigvals(J)
-                if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
-                    stable_equilibria.append(x_eq)
-                    if len(stable_equilibria) == n_equilibria:
-                        return stable_equilibria
+    # if len(stable_equilibria) < n_equilibria:
+    #     for x0 in specific_points:
+    #         x_integrated, _ = integrate_system(system, x0)
+    #         x_eq, converged, _ = newton_method(system, x_integrated, df=jacobian)
+    #         if converged:
+    #             J = jacobian(x_eq)
+    #             eigenvals = np.linalg.eigvals(J)
+    #             if all(np.real(eigenvals) < 0) and is_new_point(x_eq, stable_equilibria):
+    #                 stable_equilibria.append(x_eq)
+    #                 if len(stable_equilibria) == n_equilibria:
+    #                     return stable_equilibria
     
     return stable_equilibria

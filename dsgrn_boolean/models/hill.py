@@ -1,13 +1,16 @@
 """
 Hill System Implementation for Numerical Analysis on DSGRN/Boolean project
 
-Models the system:
+This module provides a 2D Hill system model of the form:
     dx₁/dt = -x₁ + h₀₀(x₁) + h₁₀(x₂)
-    dx₂/dt = -x₂ + h₀₁(x₁)h₁₁(x₂)
+    dx₂/dt = -x₂ + h₀₁(x₁) * h₁₁(x₂)
 
-where hᵢⱼ(x) = L + (U-L)xᵈ/(θᵈ + xᵈ)
-
-TO-DO: add a parser whose input is the net_spec and output is f_i(h_ij) for j->i
+Each Hill function is defined as:
+    h(x) = A + (B - A)*x^d/(θ^d + x^d)
+    where A is the value BEFORE the threshold, and B is the value AFTER the threshold.
+    
+Note:
+  • h₀₁ is repressing, so it reverses the L and U order.
 """
 
 import numpy as np
