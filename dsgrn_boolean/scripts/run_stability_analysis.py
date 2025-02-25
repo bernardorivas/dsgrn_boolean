@@ -10,7 +10,7 @@ from dsgrn_boolean.utils.find_equilibria import find_stable_equilibria_in_parall
 from dsgrn_boolean.utils.sample_management import load_samples
 
 # Constants
-DEFAULT_PARAMETER_INDEX = 0 # par_list = [0, 49, 98, 147]
+DEFAULT_PARAMETER_INDEX = 98 # par_list = [0, 49, 98, 147]
 DEFAULT_NUM_SAMPLES = 10000 # 100
 DEFAULT_D_MIN = 1 
 DEFAULT_D_MAX = 100 # 100
